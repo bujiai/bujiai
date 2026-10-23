@@ -41174,7 +41174,7 @@ do
 		Enabled       = true,
 		BaseHeight    = 720,    
 		Min           = 0.78,   
-		Max           = 1.15,   
+		Max           = 0.90,   
 		MaxWidthRatio = 0.92,   
 		Instances     = {},
 	}
@@ -41278,14 +41278,14 @@ end
 do
 	local T = {
 		Enabled        = true,
-		BgTransparency = 0.92,   
+		BgTransparency = 1,      
 		                         
 		Glow           = false,  
 		GlowThickness  = 2,
 		GlowAlpha      = 0.35,
-		Snow           = true,
+		Snow           = false,  
 		SnowAlpha      = 0.75,
-		SnowCount      = 16,
+		SnowCount      = 8,
 		Mask           = false,  
 		MaskAlpha      = 0.62,   
 		DebugWhite     = true,   
