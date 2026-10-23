@@ -41295,7 +41295,33 @@ do
 	local C2 = Color3.fromRGB(191, 90, 242)
 
 
+	
+	
+	
+	local function unlockFPS(target)
+		target = tonumber(target) or 240
+		local names = { "setfpscap", "set_fps_cap", "setfpslimit", "set_fps_limit", "setMaxFPS" }
+		for _, n in ipairs(names) do
+			local f = rawget(_G, n)
+			if type(f) == "function" then
+				if pcall(f, target) then return n end
+			end
+		end
+		pcall(function()
+			local L = game:GetService("Lighting")
+			if sethiddenproperty then
+				sethiddenproperty(L, "MaxFPS", target)
+			end
+		end)
+		return nil
+	end
+
 	local function attach(w, cfg)
+		
+		if T.UnlockFPS ~= false then
+			pcall(unlockFPS, T.FPSTarget or 240)
+		end
+
 		if not T.Enabled or not w then return nil end
 		local ui = w.UIElements
 		local main = ui and ui.Main
@@ -41534,6 +41560,34 @@ do
 					end
 				end
 			end)
+
+			
+			
+			if T.KillFullscreen ~= false then
+				pcall(function()
+					local sgRoot = main:FindFirstAncestorOfClass("ScreenGui") or main.Parent
+					if not sgRoot then return end
+					local function isInsideMain(o)
+						local p = o
+						while p do
+							if p == main then return true end
+							p = p.Parent
+						end
+						return false
+					end
+					for _, o in ipairs(sgRoot:GetDescendants()) do
+						if o:IsA("Frame") and not isInsideMain(o) then
+							local sz = o.Size
+							if sz.X.Scale >= 0.9 and sz.Y.Scale >= 0.9 then
+								if (o.BackgroundTransparency or 0) < 0.98 then
+									o.BackgroundTransparency = 1
+									o.Active = false
+								end
+							end
+						end
+					end
+				end)
+			end
 
 			local inner = main:FindFirstChild("Main")
 			if inner then
