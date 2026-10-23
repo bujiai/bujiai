@@ -41495,6 +41495,15 @@ do
 				local bg = main:FindFirstChild("Background")
 				
 				if bg then
+					
+					
+					pcall(function()
+						if bg:IsA("ImageLabel") then
+							bg.Image = ""
+							bg.ImageTransparency = 1
+						end
+					end)
+
 					local function killMask()
 						if not bg or not bg.Parent then return end
 						for _, ch in ipairs(bg:GetChildren()) do
