@@ -41490,6 +41490,15 @@ do
 			
 			pcall(function()
 				local bg = main:FindFirstChild("Background")
+				
+				if bg then
+					for _, ch in ipairs(bg:GetChildren()) do
+						if ch.Name == "BackgroundMask" or ch.Name:find("Mask", 1, true) then
+							pcall(function() ch.Visible = false end)
+							pcall(function() ch:Destroy() end)
+						end
+					end
+				end
 				if bg then
 					if bg:IsA("ImageLabel") or bg:IsA("ImageButton") then
 						bg.ImageTransparency = 1
