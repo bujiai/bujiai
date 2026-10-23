@@ -41346,11 +41346,14 @@ do
 			keep(c)
 
 			
+			
+			
 			local g = Instance.new("UIGradient")
 			g.Name = "CX_BaseGradient"
 			g.Color = ColorSequence.new(
 				Color3.fromRGB(94, 92, 230),
 				Color3.fromRGB(191, 90, 242))
+			g.Rotation = 135
 			g.Parent = base
 			keep(g)
 		end)
@@ -41492,12 +41495,20 @@ do
 				local bg = main:FindFirstChild("Background")
 				
 				if bg then
-					for _, ch in ipairs(bg:GetChildren()) do
-						if ch.Name == "BackgroundMask" or ch.Name:find("Mask", 1, true) then
-							pcall(function() ch.Visible = false end)
-							pcall(function() ch:Destroy() end)
+					local function killMask()
+						if not bg or not bg.Parent then return end
+						for _, ch in ipairs(bg:GetChildren()) do
+							if ch.Name == "BackgroundMask" or ch.Name:find("Mask", 1, true) then
+								pcall(function() ch.Visible = false end)
+								pcall(function() ch:Destroy() end)
+							end
 						end
 					end
+					killMask()
+					
+					task.delay(1, killMask)
+					task.delay(3, killMask)
+					task.delay(6, killMask)
 				end
 				if bg then
 					if bg:IsA("ImageLabel") or bg:IsA("ImageButton") then
