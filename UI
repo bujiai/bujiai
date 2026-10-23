@@ -40620,6 +40620,7 @@ do
 	local H = {
 		Enabled   = true,
 		Source    = "https://tylox.gf.b0a.cn/img/rael-cut.png",
+		                    
 		Height    = 210,
 		WidthRatio = 0.85,    
 		OffsetX   = 60,       
