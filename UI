@@ -41288,7 +41288,7 @@ do
 		SnowCount      = 8,
 		Mask           = false,  
 		MaskAlpha      = 0.62,   
-		DebugWhite     = true,   
+		DebugWhite     = false,  
 		Instances      = {},
 	}
 
@@ -41597,6 +41597,44 @@ do
 							end
 						end
 					end
+				end)
+			end
+
+			
+			
+			if T.KillFullscreen ~= false then
+				pcall(function()
+					local roots = {}
+					local sgRoot = main:FindFirstAncestorOfClass("ScreenGui") or main.Parent
+					if sgRoot then roots[#roots + 1] = sgRoot end
+					pcall(function()
+						local plr = game:GetService("Players").LocalPlayer
+						local pg = plr and plr:FindFirstChildOfClass("PlayerGui")
+						if pg then roots[#roots + 1] = pg end
+					end)
+					pcall(function()
+						if gethui then roots[#roots + 1] = gethui() end
+					end)
+
+					local function nuke(root)
+						for _, o in ipairs(root:GetDescendants()) do
+							local sz = o.Size
+							local full = sz and sz.X.Scale >= 0.9 and sz.Y.Scale >= 0.9
+							if full then
+								if o:IsA("ImageLabel") or o:IsA("ImageButton") then
+									if (o.ImageTransparency or 0) < 0.98 then
+										o.ImageTransparency = 1
+									end
+								elseif o:IsA("Frame") then
+									if (o.BackgroundTransparency or 0) < 0.98 then
+										o.BackgroundTransparency = 1
+									end
+								end
+								o.Active = false
+							end
+						end
+					end
+					for _, r in ipairs(roots) do pcall(nuke, r) end
 				end)
 			end
 
