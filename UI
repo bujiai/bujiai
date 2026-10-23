@@ -41222,6 +41222,26 @@ do
 		if math.abs(s - cur) < 0.01 then return end
 
 		pcall(function() win:SetUIScale(s) end)
+
+		
+		
+		task.defer(function()
+			pcall(function()
+				local m = win.UIElements and win.UIElements.Main
+				if not m then return end
+				for _, sf in ipairs(m:GetDescendants()) do
+					if sf:IsA("ScrollingFrame") then
+						local layout = sf:FindFirstChildOfClass("UIListLayout")
+						if layout then
+							local h = layout.AbsoluteContentSize.Y
+							if h > 0 then
+								sf.CanvasSize = UDim2.new(0, 0, 0, math.ceil(h) + 40)
+							end
+						end
+					end
+				end
+			end)
+		end)
 	end
 
 	function A.Apply(win)
