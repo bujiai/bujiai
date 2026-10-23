@@ -41277,7 +41277,8 @@ end
 do
 	local T = {
 		Enabled        = true,
-		BgTransparency = 0.2,    
+		BgTransparency = 0.92,   
+		                         
 		Glow           = false,  
 		GlowThickness  = 2,
 		GlowAlpha      = 0.35,
@@ -41517,6 +41518,15 @@ do
 			end
 
 			
+			
+			pcall(function()
+				local bg = main:FindFirstChild("Background")
+				if bg and (bg:IsA("ImageLabel") or bg:IsA("ImageButton")) then
+					bg.Image = ""
+					bg.ImageTransparency = 1
+				end
+			end)
+
 			pcall(function()
 				local bg = main:FindFirstChild("Background")
 				
