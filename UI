@@ -41283,7 +41283,7 @@ do
 		GlowAlpha      = 0.35,
 		Snow           = true,
 		SnowAlpha      = 0.75,
-		SnowCount      = 8,
+		SnowCount      = 16,
 		Mask           = false,  
 		MaskAlpha      = 0.62,   
 		DebugWhite     = true,   
@@ -41487,6 +41487,25 @@ do
 				end)
 			end
 
+			
+			pcall(function()
+				local bg = main:FindFirstChild("Background")
+				if bg then
+					if bg:IsA("ImageLabel") or bg:IsA("ImageButton") then
+						bg.ImageTransparency = 1
+					end
+					if bg:IsA("GuiObject") then
+						bg.BackgroundTransparency = 1
+					end
+					
+					for _, ch in ipairs(bg:GetDescendants()) do
+						if ch:IsA("ImageLabel") then
+							pcall(function() ch.ImageTransparency = 1 end)
+						end
+					end
+				end
+			end)
+
 			local inner = main:FindFirstChild("Main")
 			if inner then
 				paint(inner, 0)
@@ -41554,7 +41573,7 @@ do
 			
 			
 			for i = 1, T.SnowCount do
-				local sz = 14 + math.random(0, 8)      
+				local sz = 20 + math.random(0, 14)     
 				local fl = Instance.new("TextLabel")
 				fl.Name = "Flake" .. i
 				fl.Size = UDim2.fromOffset(sz + 6, sz + 6)
