@@ -41283,9 +41283,10 @@ do
 		GlowAlpha      = 0.35,
 		Snow           = true,
 		SnowAlpha      = 0.75,
-		SnowCount      = 24,
+		SnowCount      = 8,
 		Mask           = false,  
 		MaskAlpha      = 0.62,   
+		DebugWhite     = true,   
 		Instances      = {},
 	}
 
@@ -41410,21 +41411,81 @@ do
 			end
 			
 			
+			
 			pcall(function()
+				local roots = {}
 				local sgRoot = main:FindFirstAncestorOfClass("ScreenGui") or main.Parent
-				if not sgRoot then return end
-				for _, o in ipairs(sgRoot:GetDescendants()) do
-					if o:IsA("GuiObject") and (o.BackgroundTransparency or 0) < 0.9 then
-						local c = o.BackgroundColor3
-						local nearWhite = c and c.R > 0.80 and c.G > 0.80 and c.B > 0.80
-						local sz = o.Size
-						local fullScreen = sz.X.Scale >= 0.95 and sz.Y.Scale >= 0.95
-						if nearWhite and fullScreen then
-							o.BackgroundTransparency = 1
+				if sgRoot then roots[#roots + 1] = sgRoot end
+
+				pcall(function()
+					local plr = game:GetService("Players").LocalPlayer
+					local pg = plr and plr:FindFirstChildOfClass("PlayerGui")
+					if pg then roots[#roots + 1] = pg end
+				end)
+				pcall(function()
+					if gethui then roots[#roots + 1] = gethui() end
+				end)
+
+				local function clean(root)
+					for _, o in ipairs(root:GetDescendants()) do
+						if o:IsA("GuiObject") then
+							local sz = o.Size
+							local fullScreen = sz.X.Scale >= 0.9 and sz.Y.Scale >= 0.9
+							if fullScreen then
+								local c = o.BackgroundColor3
+								local nearWhite = c and c.R > 0.72 and c.G > 0.72 and c.B > 0.72
+								if nearWhite and (o.BackgroundTransparency or 0) < 0.98 then
+									o.BackgroundTransparency = 1
+								end
+								
+								if o:IsA("ImageLabel") or o:IsA("ImageButton") then
+									local ic = o.ImageColor3
+									local imgWhite = ic and ic.R > 0.72 and ic.G > 0.72 and ic.B > 0.72
+									if imgWhite and (o.ImageTransparency or 0) < 0.98 then
+										o.ImageTransparency = 1
+									end
+								end
+							end
 						end
 					end
 				end
+
+				for _, r in ipairs(roots) do
+					pcall(clean, r)
+				end
 			end)
+
+			
+			if T.DebugWhite then
+				pcall(function()
+					local sgRoot = main:FindFirstAncestorOfClass("ScreenGui") or main.Parent
+					if not sgRoot then return end
+					local win = main.AbsoluteSize
+					local found = {}
+					for _, o in ipairs(sgRoot:GetDescendants()) do
+						if o:IsA("GuiObject") then
+							local c = o.BackgroundColor3
+							local nearWhite = c and c.R > 0.70 and c.G > 0.70 and c.B > 0.70
+							local tr = o.BackgroundTransparency or 0
+							if nearWhite and tr < 0.95 then
+								local sz = o.AbsoluteSize
+								local big = (win.X > 0 and sz.X >= win.X * 0.5) or (win.Y > 0 and sz.Y >= win.Y * 0.5)
+								if big then
+									found[#found + 1] = string.format(
+										"%s(%s) %.2f/%.2f/%.2f tr=%.2f %.0fx%.0f z=%d",
+										o.Name, o.ClassName, c.R, c.G, c.B, tr, sz.X, sz.Y, o.ZIndex)
+								end
+							end
+						end
+					end
+					if #found > 0 then
+						warn("[CX_WHITE] \230\137\190\229\136\176 " .. #found .. " \228\184\170\229\164\167\229\157\151\232\191\145\231\153\189\229\133\131\231\180\160\239\188\154")
+						for _, line in ipairs(found) do warn("  " .. line) end
+					else
+						warn("[CX_WHITE] \230\178\161\230\156\137\229\164\167\229\157\151\232\191\145\231\153\189\229\133\131\231\180\160\239\188\136\231\153\189\232\137\178\229\143\175\232\131\189\230\157\165\232\135\170\229\155\190\231\137\135/\230\184\144\229\143\152/\229\188\149\230\147\142\233\187\152\232\174\164\239\188\137")
+					end
+				end)
+			end
 
 			local inner = main:FindFirstChild("Main")
 			if inner then
@@ -41459,6 +41520,7 @@ do
 			layer.BackgroundTransparency = 1
 			layer.ClipsDescendants = true
 			layer.ZIndex = 90          
+			layer.Active = false       
 			layer.Parent = main
 			keep(layer)
 
@@ -41469,14 +41531,14 @@ do
 				if not (fl and fl.Parent) then return end
 				local x = math.random(0, math.max(1, math.floor(main.AbsoluteSize.X) - 8))
 				fl.Position = UDim2.new(0, x, 0, -8)
-				fl.BackgroundTransparency = 0.35
+				fl.TextTransparency = 0.3
 
 				local dur = 3.2 + math.random() * 2.6
 				local tw = ts:Create(fl,
 					TweenInfo.new(dur, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, delay or 0),
 					{
 						Position = UDim2.new(0, x, 1, 4),
-						BackgroundTransparency = 1,
+						TextTransparency = 1,
 					})
 				tw.Completed:Connect(function()
 					if fl and fl.Parent then
@@ -41492,17 +41554,20 @@ do
 			
 			
 			for i = 1, T.SnowCount do
-				local sz = 3 + math.random(0, 4)
-				local fl = Instance.new("Frame")
+				local sz = 14 + math.random(0, 8)      
+				local fl = Instance.new("TextLabel")
 				fl.Name = "Flake" .. i
-				fl.Size = UDim2.fromOffset(sz, sz)
-				fl.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-				fl.BackgroundTransparency = 0.35
-				fl.BorderSizePixel = 0
+				fl.Size = UDim2.fromOffset(sz + 6, sz + 6)
+				fl.BackgroundTransparency = 1
+				fl.Text = "*"
+				fl.TextColor3 = Color3.fromRGB(255, 255, 255)
+				fl.TextTransparency = 0.3
+				fl.TextSize = sz
+				fl.Font = Enum.Font.GothamBold
+				fl.TextXAlignment = Enum.TextXAlignment.Center
+				fl.TextYAlignment = Enum.TextYAlignment.Center
 				fl.ZIndex = 90
-				local uc = Instance.new("UICorner")
-				uc.CornerRadius = UDim.new(1, 0)
-				uc.Parent = fl
+				fl.Active = false          
 				fl.Parent = layer
 				table.insert(flakes, fl)
 				keep(fl)
