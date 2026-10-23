@@ -41173,8 +41173,8 @@ do
 	local A = {
 		Enabled       = true,
 		BaseHeight    = 720,    
-		Min           = 0.72,
-		Max           = 1.00,   
+		Min           = 0.78,   
+		Max           = 1.15,   
 		MaxWidthRatio = 0.92,   
 		Instances     = {},
 	}
