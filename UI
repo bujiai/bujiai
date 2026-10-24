@@ -40299,6 +40299,7 @@ do
 		
 		do
 			local dragging, dragStart, dragOrigin, dragMoved = false, nil, nil, 0
+			local dragAbsX, dragAbsY = nil, nil
 			local UIS = game:GetService("UserInputService")
 
 			
@@ -40320,6 +40321,14 @@ do
 						dragMoved = 0
 						dragStart = input.Position
 						dragOrigin = outer.Position
+						
+						
+						pcall(function()
+							local ap0 = outer.AbsolutePosition
+							local as0 = outer.AbsoluteSize
+							dragAbsX = ap0.X + as0.X / 2
+							dragAbsY = ap0.Y
+						end)
 					end
 				end
 			end)
@@ -40329,6 +40338,7 @@ do
 				if t == Enum.UserInputType.MouseButton1 or t == Enum.UserInputType.Touch then
 					dragging = false
 					dragStart, dragOrigin = nil, nil
+					dragAbsX, dragAbsY = nil, nil
 				end
 			end)
 
@@ -40351,12 +40361,17 @@ do
 				
 				
 				local baseX, baseY = 0, 0
-				local okP, absP = pcall(function() return outer.AbsolutePosition end)
 				local okS, szP = pcall(function() return outer.AbsoluteSize end)
-				if okP and okS and absP and szP then
+				if dragAbsX and dragAbsY then
 					
-					baseX = absP.X + szP.X / 2
-					baseY = absP.Y
+					baseX = dragAbsX
+					baseY = dragAbsY
+				elseif okS and szP then
+					local okP, absP = pcall(function() return outer.AbsolutePosition end)
+					if okP and absP then
+						baseX = absP.X + szP.X / 2
+						baseY = absP.Y
+					end
 				else
 					baseX = dragOrigin.X.Offset
 					baseY = dragOrigin.Y.Offset
@@ -40666,12 +40681,11 @@ do
 				if not uc then
 					uc = Instance.new("UICorner")
 					uc.Name = name
-					uc.CornerRadius = UDim.new(0, T.Radius or 14)
 					uc.Parent = obj
 					keep(uc)
-				else
-					uc.CornerRadius = UDim.new(0, T.Radius or 14)
 				end
+				
+				uc.CornerRadius = UDim.new(0, T.Radius or 14)
 			end
 			addCorner(bg, "CX_BgCorner")
 			addCorner(main, "CX_MainCorner")
@@ -40685,8 +40699,14 @@ do
 			
 			pcall(function()
 				if main:IsA("GuiObject") then
-					main.BackgroundColor3 = T.Purple1
-					main.BackgroundTransparency = 0
+					main.BackgroundTransparency = 1
+				end
+			end)
+			
+			pcall(function()
+				local inner = main:FindFirstChild("Main")
+				if inner and inner:IsA("GuiObject") then
+					inner.BackgroundTransparency = 1
 				end
 			end)
 
