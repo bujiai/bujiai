@@ -40562,7 +40562,7 @@ do
 		Radius     = 0,    
 
 		Snow       = true,
-		SnowCount  = 12,
+		SnowCount  = 8,   
 		SnowAlpha  = 0.75,
 
 		UnlockFPS  = true,
@@ -40621,7 +40621,7 @@ do
 					elseif p > 0.85 then a = (1 - p) / 0.15
 					else a = 1 end
 					fl.TextTransparency = 1 - (a * T.SnowAlpha)
-					task.wait(0.03)
+					task.wait(0.05)   
 				end
 				if fl.Parent then fall(fl, math.random() * 2) end
 			end)
