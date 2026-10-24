@@ -41451,7 +41451,9 @@ do
 			base.Name = "CX_Base"
 			base.Size = UDim2.fromScale(1, 1)
 			base.Position = UDim2.fromOffset(0, 0)
-			base.BackgroundColor3 = Color3.fromRGB(94, 92, 230)
+			
+			
+			base.BackgroundColor3 = Color3.fromRGB(58, 52, 150)
 			base.BackgroundTransparency = 0
 			base.BorderSizePixel = 0
 			
@@ -41487,14 +41489,14 @@ do
 			
 			
 			
-			local g = Instance.new("UIGradient")
-			g.Name = "CX_BaseGradient"
-			g.Color = ColorSequence.new(
-				Color3.fromRGB(94, 92, 230),
-				Color3.fromRGB(191, 90, 242))
-			g.Rotation = 135
-			g.Parent = base
-			keep(g)
+			
+			
+			
+			
+			
+			
+			
+			
 		end)
 
 		
