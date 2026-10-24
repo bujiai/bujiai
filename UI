@@ -41461,11 +41461,15 @@ do
 			base.Active = false
 			
 			
-			base.Parent = main
+			
+			
+			local rootHost = main.Parent or main
+			base.Parent = rootHost
+			base.ZIndex = -1
 			keep(base)
 
 			pcall(function()
-				local innerForBase = main:FindFirstChild("Main")
+				local innerForBase = main:FindFirstChild("Main") or main
 				if innerForBase then
 					base.Visible = innerForBase.Visible
 					local c = innerForBase:GetPropertyChangedSignal("Visible"):Connect(function()
@@ -41504,7 +41508,7 @@ do
 
 			
 			task.spawn(function()
-				task.wait(1.5)
+				task.wait(3)
 				pcall(function()
 					local b = main:FindFirstChild("CX_Base")
 					if not b then
@@ -41525,10 +41529,11 @@ do
 					print("[CX_BASE] main \229\173\144\231\186\167\239\188\154")
 					for _, ch in ipairs(main:GetChildren()) do
 						if ch:IsA("GuiObject") then
-							print(string.format("  %s z=%d tr=%.2f vis=%s sz=%.0fx%.0f",
-								ch.Name, ch.ZIndex, ch.BackgroundTransparency, tostring(ch.Visible),
+							print(string.format("  %s [%s] z=%d tr=%.2f vis=%s sz=%.0fx%.0f img=%s",
+								ch.Name, ch.ClassName, ch.ZIndex, ch.BackgroundTransparency, tostring(ch.Visible),
 								(ch.AbsoluteSize and ch.AbsoluteSize.X or 0),
-								(ch.AbsoluteSize and ch.AbsoluteSize.Y or 0)))
+								(ch.AbsoluteSize and ch.AbsoluteSize.Y or 0),
+								(ch:IsA("ImageLabel") and tostring(ch.Image) or "-")))
 						end
 					end
 				end)
@@ -41827,6 +41832,12 @@ do
 
 					local function nuke(root)
 						for _, o in ipairs(root:GetDescendants()) do
+							
+							local isOwn = string.sub(tostring(o.Name), 1, 3) == "CX_"
+								or (o:FindFirstAncestor("CX_Base") ~= nil)
+							if isOwn then
+								continue
+							end
 							local sz = o.Size
 							local full = sz and sz.X.Scale >= 0.9 and sz.Y.Scale >= 0.9
 
