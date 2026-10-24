@@ -40544,6 +40544,7 @@ do
 		Enabled    = true,
 		Purple1    = Color3.fromRGB(94, 92, 230),
 		Purple2    = Color3.fromRGB(191, 90, 242),
+		Radius     = 14,   
 
 		Snow       = true,
 		SnowCount  = 12,
@@ -40642,6 +40643,9 @@ do
 		local function keep(o) table.insert(inst.Nodes, o) return o end
 
 		
+		
+		
+		
 		pcall(function()
 			bg.ImageTransparency = 0
 			bg.ImageColor3 = T.Purple1
@@ -40654,6 +40658,37 @@ do
 				g.Parent = bg
 			end
 			keep(g)
+
+			
+			local function addCorner(obj, name)
+				if not obj then return end
+				local uc = obj:FindFirstChild(name)
+				if not uc then
+					uc = Instance.new("UICorner")
+					uc.Name = name
+					uc.CornerRadius = UDim.new(0, T.Radius or 14)
+					uc.Parent = obj
+					keep(uc)
+				else
+					uc.CornerRadius = UDim.new(0, T.Radius or 14)
+				end
+			end
+			addCorner(bg, "CX_BgCorner")
+			addCorner(main, "CX_MainCorner")
+
+			
+			pcall(function()
+				local inner = main:FindFirstChild("Main")
+				if inner then addCorner(inner, "CX_InnerCorner") end
+			end)
+
+			
+			pcall(function()
+				if main:IsA("GuiObject") then
+					main.BackgroundColor3 = T.Purple1
+					main.BackgroundTransparency = 0
+				end
+			end)
 
 			
 			keep(bg:GetPropertyChangedSignal("ImageColor3"):Connect(function()
