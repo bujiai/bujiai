@@ -41174,7 +41174,8 @@ do
 		Enabled       = true,
 		BaseHeight    = 720,    
 		Min           = 0.78,   
-		Max           = 0.90,   
+		Max           = 1.00,   
+		                        
 		MaxWidthRatio = 0.92,   
 		Instances     = {},
 	}
