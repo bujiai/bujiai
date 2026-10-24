@@ -41763,6 +41763,10 @@ do
 				end)
 			end
 
+			
+			
+			
+			paint(main, 0)
 			local inner = main:FindFirstChild("Main")
 			if inner then
 				paint(inner, 0)
