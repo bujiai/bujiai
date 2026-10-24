@@ -41475,11 +41475,8 @@ do
 				end
 			end)
 
-			local radius = 14
-			local uc = main:FindFirstChildOfClass("UICorner")
-			if uc and uc.CornerRadius and uc.CornerRadius.Offset > 0 then
-				radius = uc.CornerRadius.Offset
-			end
+			
+			local radius = 12
 			local c = Instance.new("UICorner")
 			c.CornerRadius = UDim.new(0, radius)
 			c.Parent = base
@@ -41491,11 +41488,17 @@ do
 			
 			
 			
+			
+			local C1 = Color3.fromRGB(94, 92, 230)    
+			local C2 = Color3.fromRGB(191, 90, 242)   
 			local g = Instance.new("UIGradient")
 			g.Name = "CX_BaseGradient"
-			g.Color = ColorSequence.new(
-				Color3.fromRGB(94, 92, 230),
-				Color3.fromRGB(191, 90, 242))
+			g.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0.00, C1),
+				ColorSequenceKeypoint.new(0.45, C2),
+				ColorSequenceKeypoint.new(1.00, C1),
+			})
+			g.Rotation = 90
 			g.Parent = base
 			keep(g)
 
