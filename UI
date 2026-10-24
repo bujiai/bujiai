@@ -40536,7 +40536,204 @@ do
 		pcall(function() attachOne(h:FindFirstChild("Author"), true) end)
 	end
 
-	local origCreateWindow = aa.CreateWindow
+	
+
+
+do
+	local T = {
+		Enabled    = true,
+		Purple1    = Color3.fromRGB(94, 92, 230),
+		Purple2    = Color3.fromRGB(191, 90, 242),
+
+		Snow       = true,
+		SnowCount  = 12,
+		SnowAlpha  = 0.75,
+
+		UnlockFPS  = true,
+		FPSTarget  = 240,
+
+		Glow          = false,
+		GlowThickness = 2,
+		GlowAlpha     = 0.35,
+
+		Instances  = {},
+	}
+
+	
+	local function unlockFPS(target)
+		pcall(function() if setfpscap then setfpscap(target) end end)
+		pcall(function()
+			local s = settings and settings()
+			if s and s.SetFPSLimit then s:SetFPSLimit(target) end
+		end)
+	end
+
+	
+	local function makeSnow(parent, inst)
+		local count = tonumber(T.SnowCount) or 12
+		local layer = Instance.new("Frame")
+		layer.Name = "CX_Snow"
+		layer.Size = UDim2.fromScale(1, 1)
+		layer.BackgroundTransparency = 1
+		layer.BorderSizePixel = 0
+		layer.ZIndex = 90
+		layer.ClipsDescendants = true
+		layer.Parent = parent
+		table.insert(inst.Nodes, layer)
+
+		local function fall(fl, delay)
+			local w = layer.AbsoluteSize.X
+			local h = layer.AbsoluteSize.Y
+			if w <= 0 or h <= 0 then
+				task.delay(0.3, function() if fl.Parent then fall(fl, 0) end end)
+				return
+			end
+			local x = math.random() * w
+			fl.Position = UDim2.fromOffset(x, -20)
+			fl.TextTransparency = 1
+			task.spawn(function()
+				task.wait(delay or 0)
+				local dur = 4 + math.random() * 4
+				local t0 = tick()
+				while fl.Parent do
+					local p = (tick() - t0) / dur
+					if p >= 1 then break end
+					local y = -20 + (h + 40) * p
+					fl.Position = UDim2.fromOffset(x + math.sin(p * 6) * 12, y)
+					local a
+					if p < 0.1 then a = p / 0.1
+					elseif p > 0.85 then a = (1 - p) / 0.15
+					else a = 1 end
+					fl.TextTransparency = 1 - (a * T.SnowAlpha)
+					task.wait(0.03)
+				end
+				if fl.Parent then fall(fl, math.random() * 2) end
+			end)
+		end
+
+		for i = 1, count do
+			local fl = Instance.new("TextLabel")
+			fl.Name = "CX_Flake"
+			fl.Size = UDim2.fromOffset(14, 14)
+			fl.BackgroundTransparency = 1
+			fl.BorderSizePixel = 0
+			fl.Text = "*"
+			fl.TextColor3 = Color3.new(1, 1, 1)
+			fl.TextSize = 12 + math.random() * 6
+			fl.Font = Enum.Font.GothamBold
+			fl.TextTransparency = 1
+			fl.ZIndex = 91
+			fl.Parent = layer
+			table.insert(inst.Nodes, fl)
+			fall(fl, math.random() * 3)
+		end
+		return layer
+	end
+
+	
+	local function attach(w)
+		if not T.Enabled or not w then return nil end
+		local ui = w.UIElements
+		local main = ui and ui.Main
+		local bg = main and main.Background
+		if not bg then return nil end
+
+		local inst = { Window = w, Nodes = {} }
+		local function keep(o) table.insert(inst.Nodes, o) return o end
+
+		
+		pcall(function()
+			bg.ImageTransparency = 0
+			bg.ImageColor3 = T.Purple1
+
+			local g = bg:FindFirstChild("CX_BgGradient")
+			if not g then
+				g = Instance.new("UIGradient")
+				g.Name = "CX_BgGradient"
+				g.Color = ColorSequence.new(T.Purple1, T.Purple2)
+				g.Parent = bg
+			end
+			keep(g)
+
+			
+			keep(bg:GetPropertyChangedSignal("ImageColor3"):Connect(function()
+				if bg.ImageColor3 ~= T.Purple1 then
+					bg.ImageColor3 = T.Purple1
+				end
+			end))
+			keep(bg:GetPropertyChangedSignal("ImageTransparency"):Connect(function()
+				if bg.ImageTransparency ~= 0 then
+					bg.ImageTransparency = 0
+				end
+			end))
+		end)
+
+		
+		if T.Snow then
+			pcall(function() keep(makeSnow(main, inst)) end)
+		end
+
+		
+		if T.Glow then
+			pcall(function()
+				local stroke = Instance.new("UIStroke")
+				stroke.Name = "CX_Glow"
+				stroke.Thickness = T.GlowThickness
+				stroke.Color = T.Purple2
+				stroke.Transparency = 1 - T.GlowAlpha
+				stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+				stroke.Parent = bg
+				keep(stroke)
+			end)
+		end
+
+		table.insert(T.Instances, inst)
+		return inst
+	end
+
+	local function detach(inst)
+		if not inst then return end
+		for _, o in ipairs(inst.Nodes or {}) do
+			pcall(function()
+				if typeof(o) == "Instance" then
+					o:Destroy()
+				elseif typeof(o) == "RBXScriptConnection" then
+					o:Disconnect()
+				end
+			end)
+		end
+		inst.Nodes = {}
+	end
+
+	function T.SetEnabled(on)
+		T.Enabled = on and true or false
+		for _, inst in ipairs(T.Instances) do
+			if T.Enabled then
+				pcall(function() attach(inst.Window) end)
+			else
+				detach(inst)
+			end
+		end
+	end
+
+	T.Attach = attach
+
+	
+	local themeOrig = aa.CreateWindow
+	aa.CreateWindow = function(self, cfg)
+		local w = themeOrig(self, cfg)
+		pcall(function()
+			if T.UnlockFPS ~= false then unlockFPS(T.FPSTarget or 240) end
+			T.Attach(w)
+		end)
+		return w
+	end
+
+	aa.CX_THEME = T
+end
+
+
+local origCreateWindow = aa.CreateWindow
 	aa.CreateWindow = function(self, config)
 		local w = origCreateWindow(self, config)
 		pcall(function()
@@ -41384,675 +41581,5 @@ do
 		end
 	end)
 end
-
-
-do
-	local T = {
-		Enabled        = true,
-		BgTransparency = 1,      
-		                         
-		Glow           = false,  
-		GlowThickness  = 2,
-		GlowAlpha      = 0.35,
-		Snow           = false,  
-		SnowAlpha      = 0.75,
-		SnowCount      = 8,
-		Mask           = false,  
-		MaskAlpha      = 0.62,   
-		DebugWhite     = true,   
-		Instances      = {},
-	}
-
-	
-	local C1 = Color3.fromRGB(94, 92, 230)
-	local C2 = Color3.fromRGB(191, 90, 242)
-
-
-	
-	
-	
-	local function unlockFPS(target)
-		target = tonumber(target) or 240
-		local names = { "setfpscap", "set_fps_cap", "setfpslimit", "set_fps_limit", "setMaxFPS" }
-		for _, n in ipairs(names) do
-			local f = rawget(_G, n)
-			if type(f) == "function" then
-				if pcall(f, target) then return n end
-			end
-		end
-		pcall(function()
-			local L = game:GetService("Lighting")
-			if sethiddenproperty then
-				sethiddenproperty(L, "MaxFPS", target)
-			end
-		end)
-		return nil
-	end
-
-	local function attach(w, cfg)
-		
-		if T.UnlockFPS ~= false then
-			pcall(unlockFPS, T.FPSTarget or 240)
-		end
-
-		if not T.Enabled or not w then return nil end
-		local ui = w.UIElements
-		local main = ui and ui.Main
-		local bg = main and main.Background
-		if not bg then return nil end
-
-		local inst = { Window = w, Nodes = {} }
-		local function keep(o) table.insert(inst.Nodes, o) return o end
-
-		
-		
-		pcall(function()
-			local base = Instance.new("Frame")
-			base.Name = "CX_Base"
-			base.Size = UDim2.fromScale(1, 1)
-			base.Position = UDim2.fromOffset(0, 0)
-			
-			base.BackgroundColor3 = Color3.new(1, 1, 1)
-			base.BackgroundTransparency = 0
-			base.BorderSizePixel = 0
-			
-			
-			base.ZIndex = 0
-			base.Active = false
-			
-			
-			
-			
-			
-			base.Parent = main
-			base.ZIndex = 0
-			keep(base)
-
-			
-			
-			pcall(function()
-				local function killCorner()
-					for _, uc0 in ipairs(main:GetChildren()) do
-						if uc0:IsA("UICorner") then
-							pcall(function() uc0:Destroy() end)
-						end
-					end
-				end
-				killCorner()
-				
-				local conn = main.ChildAdded:Connect(function(ch)
-					if ch:IsA("UICorner") then
-						task.defer(function() pcall(function() ch:Destroy() end) end)
-					end
-				end)
-				keep(conn)
-			end)
-
-			pcall(function()
-				local innerForBase = main:FindFirstChild("Main") or main
-				if innerForBase then
-					base.Visible = innerForBase.Visible
-					local c = innerForBase:GetPropertyChangedSignal("Visible"):Connect(function()
-						base.Visible = innerForBase.Visible
-					end)
-					keep(c)
-				end
-			end)
-
-			
-			
-			
-			local radius = 0
-			if radius > 0 then
-				local c = Instance.new("UICorner")
-				c.CornerRadius = UDim.new(0, radius)
-				c.Parent = base
-				keep(c)
-			end
-
-			
-			
-			
-			
-			local C1 = Color3.fromRGB(94, 92, 230)    
-			local C2 = Color3.fromRGB(191, 90, 242)   
-			local g = Instance.new("UIGradient")
-			g.Name = "CX_BaseGradient"
-			g.Color = ColorSequence.new(C1, C2)
-			g.Parent = base
-			keep(g)
-
-			
-			task.spawn(function()
-				task.wait(3)
-				pcall(function()
-					local host = main
-					local b = host:FindFirstChild("CX_Base") or (main.Parent and main.Parent:FindFirstChild("CX_Base"))
-					if not b then
-						print("[CX_BASE] \228\184\141\229\173\152\229\156\168\239\188\129\239\188\136\229\156\168 " .. tostring(host.Name) .. " \229\146\140 main \228\184\139\233\131\189\230\178\161\230\137\190\229\136\176\239\188\137")
-						return
-					end
-					local uc2 = b:FindFirstChildOfClass("UICorner")
-					local gg = b:FindFirstChildOfClass("UIGradient")
-					local sz = b.AbsoluteSize
-					print(string.format(
-						"[CX_BASE] visible=%s tr=%.2f color=%d,%d,%d size=%.0fx%.0f z=%d parent=%s",
-						tostring(b.Visible), b.BackgroundTransparency,
-						b.BackgroundColor3.R * 255, b.BackgroundColor3.G * 255, b.BackgroundColor3.B * 255,
-						sz.X, sz.Y, b.ZIndex, tostring(b.Parent and b.Parent.Name)))
-					print("[CX_BASE] corner=" .. (uc2 and tostring(uc2.CornerRadius) or "\230\151\160")
-						.. " gradient=" .. (gg and "\230\156\137" or "\230\151\160"))
-					
-					print("[CX_BASE] \231\170\151\229\143\163\230\160\185(" .. tostring(host.Name) .. ") \229\173\144\231\186\167\239\188\154")
-					for _, ch in ipairs(host:GetChildren()) do
-						if ch:IsA("GuiObject") then
-							print(string.format("  %s [%s] z=%d tr=%.2f vis=%s sz=%.0fx%.0f img=%s",
-								ch.Name, ch.ClassName, ch.ZIndex, ch.BackgroundTransparency, tostring(ch.Visible),
-								(ch.AbsoluteSize and ch.AbsoluteSize.X or 0),
-								(ch.AbsoluteSize and ch.AbsoluteSize.Y or 0),
-								(ch:IsA("ImageLabel") and tostring(ch.Image) or "-")))
-						end
-					end
-				end)
-			end)
-		end)
-
-		
-
-		
-		pcall(function()
-			local basePurple = Color3.fromRGB(94, 92, 230)
-			bg.ImageColor3 = basePurple
-			
-			
-			bg.ImageTransparency = 1
-			local guard = bg:GetPropertyChangedSignal("ImageColor3"):Connect(function()
-				pcall(function()
-					if bg.ImageColor3 ~= basePurple then bg.ImageColor3 = basePurple end
-				end)
-			end)
-			keep(guard)
-		end)
-
-
-		
-
-		
-		
-		pcall(function()
-			
-			
-			
-			local winSize
-			pcall(function() winSize = main.AbsoluteSize end)
-
-			local function paint(o, depth)
-				if not o or depth > 5 then return end
-
-				
-				
-				
-				
-				pcall(function()
-					if o:IsA("ImageLabel") or o:IsA("ImageButton") then
-						local img = tostring(o.Image or "")
-						
-						
-						
-						
-						
-						
-						
-						local isSlice = false
-						pcall(function()
-							isSlice = (o.ScaleType == Enum.ScaleType.Slice)
-						end)
-
-						local skip =
-							img:find("rbxthumb://", 1, true) ~= nil
-							or img:find("rbxasset://", 1, true) ~= nil
-							or string.sub(tostring(o.Name), 1, 3) == "CX_"
-							or (o:FindFirstAncestor("CX_Base") ~= nil)
-							or isSlice
-
-						if not skip and (o.ImageTransparency or 0) < 0.95 then
-							local c = o.ImageColor3
-							local nearWhite = c and c.R > 0.80 and c.G > 0.80 and c.B > 0.80
-							local sz = o.AbsoluteSize
-							local big = true
-							if winSize and winSize.X > 0 then
-								big = (sz.X >= winSize.X * 0.25) or (sz.Y >= winSize.Y * 0.25)
-							end
-							
-							
-							
-							local isAssetId = img:find("rbxassetid://", 1, true) ~= nil
-							if nearWhite and isAssetId and big then
-								o.ImageTransparency = 1
-							end
-						end
-					end
-				end)
-
-				pcall(function()
-					
-					
-					
-					local isOwn = string.sub(tostring(o.Name), 1, 3) == "CX_"
-						or (o:FindFirstAncestor("CX_Base") ~= nil)
-
-					if not isOwn and o:IsA("GuiObject") and (o.BackgroundTransparency or 0) < 0.5 then
-						local c = o.BackgroundColor3
-						
-						local isNeutral = c and (
-							(c.R < 0.30 and c.G < 0.30 and c.B < 0.30)      
-							or (c.R > 0.85 and c.G > 0.85 and c.B > 0.85)    
-							or (math.abs(c.R - c.G) < 0.05 and math.abs(c.G - c.B) < 0.05) 
-						)
-						local big = true
-						if winSize and winSize.X > 0 then
-							local sz = o.AbsoluteSize
-							big = (sz.X >= winSize.X * 0.3) or (sz.Y >= winSize.Y * 0.3)
-						end
-						if isNeutral and big then
-							o.BackgroundTransparency = 1
-						end
-					end
-				end)
-				for _, ch in ipairs(o:GetChildren()) do
-					paint(ch, depth + 1)
-				end
-			end
-			
-			
-			
-			pcall(function()
-				local roots = {}
-				local sgRoot = main:FindFirstAncestorOfClass("ScreenGui") or main.Parent
-				if sgRoot then roots[#roots + 1] = sgRoot end
-
-				pcall(function()
-					local plr = game:GetService("Players").LocalPlayer
-					local pg = plr and plr:FindFirstChildOfClass("PlayerGui")
-					if pg then roots[#roots + 1] = pg end
-				end)
-				pcall(function()
-					if gethui then roots[#roots + 1] = gethui() end
-				end)
-
-				local function clean(root)
-					for _, o in ipairs(root:GetDescendants()) do
-						if o:IsA("GuiObject") then
-							local sz = o.Size
-							local fullScreen = sz.X.Scale >= 0.9 and sz.Y.Scale >= 0.9
-							if fullScreen then
-								local c = o.BackgroundColor3
-								local nearWhite = c and c.R > 0.72 and c.G > 0.72 and c.B > 0.72
-								if nearWhite and (o.BackgroundTransparency or 0) < 0.98 then
-									o.BackgroundTransparency = 1
-								end
-								
-								if o:IsA("ImageLabel") or o:IsA("ImageButton") then
-									local ic = o.ImageColor3
-									local imgWhite = ic and ic.R > 0.72 and ic.G > 0.72 and ic.B > 0.72
-									if imgWhite and (o.ImageTransparency or 0) < 0.98 then
-										o.ImageTransparency = 1
-									end
-								end
-							end
-						end
-					end
-				end
-
-				for _, r in ipairs(roots) do
-					pcall(clean, r)
-				end
-			end)
-
-			
-			if T.DebugWhite then
-				pcall(function()
-					local sgRoot = main:FindFirstAncestorOfClass("ScreenGui") or main.Parent
-					if not sgRoot then return end
-					local win = main.AbsoluteSize
-					local found = {}
-					for _, o in ipairs(sgRoot:GetDescendants()) do
-						if o:IsA("GuiObject") then
-							local c = o.BackgroundColor3
-							local nearWhite = c and c.R > 0.70 and c.G > 0.70 and c.B > 0.70
-							local tr = o.BackgroundTransparency or 0
-							if nearWhite and tr < 0.95 then
-								local sz = o.AbsoluteSize
-								local big = (win.X > 0 and sz.X >= win.X * 0.5) or (win.Y > 0 and sz.Y >= win.Y * 0.5)
-								if big then
-									found[#found + 1] = string.format(
-										"%s(%s) %.2f/%.2f/%.2f tr=%.2f %.0fx%.0f z=%d",
-										o.Name, o.ClassName, c.R, c.G, c.B, tr, sz.X, sz.Y, o.ZIndex)
-								end
-							end
-						end
-					end
-					if #found > 0 then
-						print("[CX_WHITE] \230\137\190\229\136\176 " .. #found .. " \228\184\170\232\191\145\231\153\189\229\133\131\231\180\160\239\188\154")
-						for _, line in ipairs(found) do print("  " .. line) end
-					else
-						print("[CX_WHITE] \230\178\161\230\156\137\232\191\145\231\153\189\229\133\131\231\180\160\239\188\136\231\153\189\232\137\178\229\143\175\232\131\189\230\157\165\232\135\170\229\155\190\231\137\135/\230\184\144\229\143\152/\229\188\149\230\147\142\233\187\152\232\174\164\239\188\137")
-					end
-					
-					pcall(function()
-						print("[CX_MAIN] main \231\154\132\231\155\180\230\142\165\229\173\144\231\186\167\239\188\154")
-						for _, ch in ipairs(main:GetChildren()) do
-							local t = ch:IsA("GuiObject") and string.format(
-								"  %s [%s] z=%d bgtr=%.2f sz=%.0fx%.0f",
-								ch.Name, ch.ClassName, ch.ZIndex or -1,
-								ch.BackgroundTransparency or -1,
-								(ch.AbsoluteSize and ch.AbsoluteSize.X or 0),
-								(ch.AbsoluteSize and ch.AbsoluteSize.Y or 0))
-								or ("  " .. ch.Name .. " [" .. ch.ClassName .. "]")
-							print(t)
-							if ch:IsA("ImageLabel") or ch:IsA("ImageButton") then
-								print("    Image=" .. tostring(ch.Image) ..
-									" imgtr=" .. tostring(ch.ImageTransparency) ..
-									" color=" .. tostring(ch.ImageColor3))
-							end
-						end
-					end)
-				end)
-			end
-
-			
-			
-			pcall(function()
-				local bg = main:FindFirstChild("Background")
-				if bg and (bg:IsA("ImageLabel") or bg:IsA("ImageButton")) then
-					bg.Image = ""
-					bg.ImageTransparency = 1
-				end
-			end)
-
-			pcall(function()
-				local bg = main:FindFirstChild("Background")
-				
-				if bg then
-					
-					
-					pcall(function()
-						if bg:IsA("ImageLabel") then
-							bg.Image = ""
-							bg.ImageTransparency = 1
-						end
-					end)
-
-					local function killMask()
-						if not bg or not bg.Parent then return end
-						for _, ch in ipairs(bg:GetChildren()) do
-							if ch.Name == "BackgroundMask" or ch.Name:find("Mask", 1, true) then
-								pcall(function() ch.Visible = false end)
-								pcall(function() ch:Destroy() end)
-							end
-						end
-					end
-					killMask()
-					
-					task.delay(1, killMask)
-					task.delay(3, killMask)
-					task.delay(6, killMask)
-				end
-				if bg then
-					if bg:IsA("ImageLabel") or bg:IsA("ImageButton") then
-						bg.ImageTransparency = 1
-					end
-					if bg:IsA("GuiObject") then
-						bg.BackgroundTransparency = 1
-					end
-					
-					for _, ch in ipairs(bg:GetDescendants()) do
-						if ch:IsA("ImageLabel") then
-							pcall(function() ch.ImageTransparency = 1 end)
-						end
-					end
-				end
-			end)
-
-			
-			
-			if T.KillFullscreen ~= false then
-				pcall(function()
-					local sgRoot = main:FindFirstAncestorOfClass("ScreenGui") or main.Parent
-					if not sgRoot then return end
-					local function isInsideMain(o)
-						local p = o
-						while p do
-							if p == main then return true end
-							p = p.Parent
-						end
-						return false
-					end
-					for _, o in ipairs(sgRoot:GetDescendants()) do
-						if o:IsA("Frame") and not isInsideMain(o) then
-							local sz = o.Size
-							if sz.X.Scale >= 0.9 and sz.Y.Scale >= 0.9 then
-								if (o.BackgroundTransparency or 0) < 0.98 then
-									o.BackgroundTransparency = 1
-									o.Active = false
-								end
-							end
-						end
-					end
-				end)
-			end
-
-			
-			
-			if T.KillFullscreen ~= false then
-				pcall(function()
-					local roots = {}
-					local sgRoot = main:FindFirstAncestorOfClass("ScreenGui") or main.Parent
-					if sgRoot then roots[#roots + 1] = sgRoot end
-					pcall(function()
-						local plr = game:GetService("Players").LocalPlayer
-						local pg = plr and plr:FindFirstChildOfClass("PlayerGui")
-						if pg then roots[#roots + 1] = pg end
-					end)
-					pcall(function()
-						if gethui then roots[#roots + 1] = gethui() end
-					end)
-
-					local function nuke(root)
-						for _, o in ipairs(root:GetDescendants()) do
-							
-							local isOwn = string.sub(tostring(o.Name), 1, 3) == "CX_"
-								or (o:FindFirstAncestor("CX_Base") ~= nil)
-							if isOwn then
-								continue
-							end
-							local sz = o.Size
-							local full = sz and sz.X.Scale >= 0.9 and sz.Y.Scale >= 0.9
-
-							
-							
-							local white = false
-							if o:IsA("Frame") then
-								local c = o.BackgroundColor3
-								white = c and c.R > 0.92 and c.G > 0.92 and c.B > 0.92
-									and (o.BackgroundTransparency or 0) < 0.95
-							elseif o:IsA("ImageLabel") or o:IsA("ImageButton") then
-								local c = o.ImageColor3
-								white = c and c.R > 0.92 and c.G > 0.92 and c.B > 0.92
-									and (o.ImageTransparency or 0) < 0.95
-							end
-
-							if full or (white and (o.ZIndex or 0) > 0) then
-								if o:IsA("ImageLabel") or o:IsA("ImageButton") then
-									if (o.ImageTransparency or 0) < 0.98 then
-										o.ImageTransparency = 1
-									end
-								elseif o:IsA("Frame") then
-									if (o.BackgroundTransparency or 0) < 0.98 then
-										o.BackgroundTransparency = 1
-									end
-								end
-								if full then o.Active = false end
-							end
-						end
-					end
-					for _, r in ipairs(roots) do pcall(nuke, r) end
-				end)
-			end
-
-			
-			
-			
-			paint(main, 0)
-			local inner = main:FindFirstChild("Main")
-			if inner then
-				paint(inner, 0)
-				
-				for _, nm in ipairs({ "Topbar", "SideBar", "Sidebar", "Pages", "PageContainer" }) do
-					local c = inner:FindFirstChild(nm)
-					if c then paint(c, 0) end
-				end
-			end
-		end)
-
-		
-		if T.Glow then
-			pcall(function()
-				local st = Instance.new("UIStroke")
-				st.Name = "CX_Glow"
-				st.Color = C2
-				st.Thickness = T.GlowThickness
-				st.Transparency = T.GlowAlpha
-				st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-				st.Parent = main
-				keep(st)
-			end)
-		end
-
-		
-		if T.Snow then
-			local layer = Instance.new("Frame")
-			layer.Name = "CX_Snow"
-			layer.Size = UDim2.fromScale(1, 1)
-			layer.BackgroundTransparency = 1
-			layer.ClipsDescendants = true
-			layer.ZIndex = 90          
-			layer.Active = false       
-			layer.Parent = main
-			keep(layer)
-
-			local ts = game:GetService("TweenService")
-			local flakes = {}
-
-			local function fall(fl, delay)
-				if not (fl and fl.Parent) then return end
-				local x = math.random(0, math.max(1, math.floor(main.AbsoluteSize.X) - 8))
-				fl.Position = UDim2.new(0, x, 0, -8)
-				fl.TextTransparency = 0.3
-
-				local dur = 3.2 + math.random() * 2.6
-				local tw = ts:Create(fl,
-					TweenInfo.new(dur, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, 0, false, delay or 0),
-					{
-						Position = UDim2.new(0, x, 1, 4),
-						TextTransparency = 1,
-					})
-				tw.Completed:Connect(function()
-					if fl and fl.Parent then
-						task.delay(math.random() * 2, function()
-							if fl and fl.Parent then fall(fl, 0) end
-						end)
-					end
-				end)
-				tw:Play()
-			end
-
-			
-			
-			
-			for i = 1, T.SnowCount do
-				local sz = 20 + math.random(0, 14)     
-				local fl = Instance.new("TextLabel")
-				fl.Name = "Flake" .. i
-				fl.Size = UDim2.fromOffset(sz + 6, sz + 6)
-				fl.BackgroundTransparency = 1
-				fl.Text = "*"
-				fl.TextColor3 = Color3.fromRGB(255, 255, 255)
-				fl.TextTransparency = 0.3
-				fl.TextSize = sz
-				fl.Font = Enum.Font.GothamBold
-				fl.TextXAlignment = Enum.TextXAlignment.Center
-				fl.TextYAlignment = Enum.TextYAlignment.Center
-				fl.ZIndex = 90
-				fl.Active = false          
-				fl.Parent = layer
-				table.insert(flakes, fl)
-				keep(fl)
-				fall(fl, math.random() * 3)
-			end
-		end
-
-		
-		if T.Mask then
-			local sg = main:FindFirstAncestorOfClass("ScreenGui")
-			if sg then
-				local mask = Instance.new("Frame")
-				mask.Name = "CX_ScreenMask"
-				mask.Size = UDim2.fromScale(1, 1)
-				mask.Position = UDim2.fromOffset(0, 0)
-				mask.BackgroundColor3 = Color3.new(0, 0, 0)
-				mask.BackgroundTransparency = T.MaskAlpha
-				mask.BorderSizePixel = 0
-				mask.ZIndex = -10
-				
-				mask.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-				mask.Parent = sg
-				keep(mask)
-
-				
-				pcall(function()
-					local inner = main:FindFirstChild("Main")
-					if inner then
-						mask.Visible = inner.Visible
-						inner:GetPropertyChangedSignal("Visible"):Connect(function()
-							mask.Visible = inner.Visible
-						end)
-					end
-				end)
-			end
-		end
-
-		return inst
-	end
-
-	local function destroy()
-		for _, inst in ipairs(T.Instances) do
-			pcall(function()
-				for _, o in ipairs(inst.Nodes or {}) do
-					pcall(function() o:Destroy() end)
-				end
-			end)
-		end
-		T.Instances = {}
-	end
-
-	aa.CX_THEME = T
-	T.Attach = attach
-	T.Destroy = destroy
-end
-
-
-do
-	local themeOrigCreateWindow = aa.CreateWindow
-	aa.CreateWindow = function(self, config)
-		local w = themeOrigCreateWindow(self, config)
-		pcall(function()
-			local inst = aa.CX_THEME.Attach(w, config)
-			if inst then table.insert(aa.CX_THEME.Instances, inst) end
-		end)
-		return w
-	end
-end
-
 
 return aa
