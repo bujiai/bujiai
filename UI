@@ -41567,7 +41567,13 @@ do
 				end)
 
 				pcall(function()
-					if o:IsA("GuiObject") and (o.BackgroundTransparency or 0) < 0.5 then
+					
+					
+					
+					local isOwn = string.sub(tostring(o.Name), 1, 3) == "CX_"
+						or (o:FindFirstAncestor("CX_Base") ~= nil)
+
+					if not isOwn and o:IsA("GuiObject") and (o.BackgroundTransparency or 0) < 0.5 then
 						local c = o.BackgroundColor3
 						
 						local isNeutral = c and (
