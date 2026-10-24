@@ -40675,9 +40675,13 @@ do
 			keep(g)
 
 			
+			
 			local function addCorner(obj, name)
 				if not obj then return end
-				local uc = obj:FindFirstChild(name)
+				local uc = obj:FindFirstChildOfClass("UICorner")
+				if not uc then
+					uc = obj:FindFirstChild(name)
+				end
 				if not uc then
 					uc = Instance.new("UICorner")
 					uc.Name = name
@@ -40687,6 +40691,13 @@ do
 				
 				uc.CornerRadius = UDim.new(0, T.Radius or 14)
 			end
+
+			
+			
+			pcall(function()
+				bg.ScaleType = Enum.ScaleType.Stretch
+			end)
+
 			addCorner(bg, "CX_BgCorner")
 			addCorner(main, "CX_MainCorner")
 
