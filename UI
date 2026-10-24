@@ -40618,7 +40618,8 @@ end
 
 do
 	local H = {
-		Enabled   = true,
+		Enabled   = false,   
+		                     
 		Source    = "https://tylox.gf.b0a.cn/img/rael-cut.png",
 		                    
 		Height    = 210,
@@ -40729,6 +40730,7 @@ do
 	end
 
 	function H.Attach(win, opts)
+		H._win = win
 		opts = opts or {}
 		if not win then return nil end
 
@@ -40875,6 +40877,16 @@ do
 		if not img then return end
 		local aspect = img.Size.X.Offset / math.max(img.Size.Y.Offset, 1)
 		img.Size = UDim2.fromOffset(math.floor(h * aspect), h)
+	end
+
+	
+	function H.Refresh()
+		if H.Enabled then
+			local w = H._win
+			if w then pcall(function() H.Attach(w) end) end
+		else
+			pcall(function() H.Destroy() end)
+		end
 	end
 
 	function H.SetVisible(on)
@@ -41064,6 +41076,24 @@ do
 			Callback = function(v)
 				S.Mask = v / 100
 				pcall(function() win:SetBackgroundTransparency(S.Mask) end)
+			end,
+		})
+
+		
+		look:Toggle({
+			Title = "\230\152\190\231\164\186\231\170\151\229\143\163\231\171\139\231\187\152",
+			Desc = "\229\188\128\229\144\175\229\144\142\231\170\151\229\143\163\233\161\182\233\131\168\230\152\190\231\164\186\231\171\139\231\187\152\227\128\130\229\155\190\231\137\135\229\143\170\228\184\139\232\189\189\228\184\128\230\172\161\229\185\182\231\188\147\229\173\152\229\136\176 TyloxHero/\239\188\140\228\185\139\229\144\142\232\175\187\230\156\172\229\156\176\239\188\155"
+				.. "\228\189\134\230\175\143\229\184\167\232\166\129\230\184\178\230\159\147\228\184\128\229\188\160\229\164\167\229\155\190\239\188\140\228\189\142\233\133\141\232\174\190\229\164\135\228\188\154\230\142\137\229\184\167\227\128\130",
+			Value = false,
+			Callback = function(v)
+				pcall(function()
+					if aa.CX_HERO then
+						aa.CX_HERO.Enabled = (v == true)
+						if type(aa.CX_HERO.Refresh) == "function" then
+							aa.CX_HERO.Refresh()
+						end
+					end
+				end)
 			end,
 		})
 
