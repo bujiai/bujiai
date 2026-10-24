@@ -41498,6 +41498,38 @@ do
 				Color3.fromRGB(191, 90, 242))
 			g.Parent = base
 			keep(g)
+
+			
+			task.spawn(function()
+				task.wait(1.5)
+				pcall(function()
+					local b = main:FindFirstChild("CX_Base")
+					if not b then
+						print("[CX_BASE] \228\184\141\229\173\152\229\156\168\239\188\129")
+						return
+					end
+					local uc2 = b:FindFirstChildOfClass("UICorner")
+					local gg = b:FindFirstChildOfClass("UIGradient")
+					local sz = b.AbsoluteSize
+					print(string.format(
+						"[CX_BASE] visible=%s tr=%.2f color=%d,%d,%d size=%.0fx%.0f z=%d parent=%s",
+						tostring(b.Visible), b.BackgroundTransparency,
+						b.BackgroundColor3.R * 255, b.BackgroundColor3.G * 255, b.BackgroundColor3.B * 255,
+						sz.X, sz.Y, b.ZIndex, tostring(b.Parent and b.Parent.Name)))
+					print("[CX_BASE] corner=" .. (uc2 and tostring(uc2.CornerRadius) or "\230\151\160")
+						.. " gradient=" .. (gg and "\230\156\137" or "\230\151\160"))
+					
+					print("[CX_BASE] main \229\173\144\231\186\167\239\188\154")
+					for _, ch in ipairs(main:GetChildren()) do
+						if ch:IsA("GuiObject") then
+							print(string.format("  %s z=%d tr=%.2f vis=%s sz=%.0fx%.0f",
+								ch.Name, ch.ZIndex, ch.BackgroundTransparency, tostring(ch.Visible),
+								(ch.AbsoluteSize and ch.AbsoluteSize.X or 0),
+								(ch.AbsoluteSize and ch.AbsoluteSize.Y or 0)))
+						end
+					end
+				end)
+			end)
 		end)
 
 		
