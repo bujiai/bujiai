@@ -41224,20 +41224,77 @@ do
 		pcall(function() win:SetUIScale(s) end)
 
 		
-		
-		task.defer(function()
-			pcall(function()
-				local m = win.UIElements and win.UIElements.Main
-				if not m then return end
-				for _, sf in ipairs(m:GetDescendants()) do
-					if sf:IsA("ScrollingFrame") then
-						local layout = sf:FindFirstChildOfClass("UIListLayout")
-						if layout then
-							local h = layout.AbsoluteContentSize.Y
-							if h > 0 then
-								sf.CanvasSize = UDim2.new(0, 0, 0, math.ceil(h) + 40)
-							end
-						end
+		pcall(function()
+			if A.RefreshCanvas then A.RefreshCanvas(win) end
+		end)
+	end
+
+	
+	
+	
+	
+	
+	
+	local watched = setmetatable({}, { __mode = "k" })
+
+	local function bindScroll(sf)
+		if not sf or watched[sf] then return end
+		local layout = sf:FindFirstChildOfClass("UIListLayout")
+		if not layout then return end
+		watched[sf] = true
+
+		local function sync()
+			local h = layout.AbsoluteContentSize.Y
+			if h and h > 0 then
+				sf.CanvasSize = UDim2.new(0, 0, 0, math.ceil(h) + 40)
+			end
+		end
+		sync()
+		pcall(function()
+			layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(sync)
+		end)
+		pcall(function()
+			sf.ChildAdded:Connect(function()
+				task.defer(sync)
+			end)
+		end)
+		pcall(function()
+			sf.ChildRemoved:Connect(function()
+				task.defer(sync)
+			end)
+		end)
+	end
+
+	function A.RefreshCanvas(win)
+		if not win then return end
+		pcall(function()
+			local m = win.UIElements and win.UIElements.Main
+			if not m then return end
+			for _, sf in ipairs(m:GetDescendants()) do
+				if sf:IsA("ScrollingFrame") then
+					bindScroll(sf)
+				end
+			end
+		end)
+	end
+
+	function A.WatchCanvas(win)
+		if not win then return end
+		pcall(function()
+			local m = win.UIElements and win.UIElements.Main
+			if not m then return end
+			
+			for _, sf in ipairs(m:GetDescendants()) do
+				if sf:IsA("ScrollingFrame") then bindScroll(sf) end
+			end
+			
+			m.DescendantAdded:Connect(function(d)
+				if d:IsA("ScrollingFrame") then
+					task.defer(function() bindScroll(d) end)
+				elseif d:IsA("UIListLayout") then
+					local parent = d.Parent
+					if parent and parent:IsA("ScrollingFrame") then
+						task.defer(function() bindScroll(parent) end)
 					end
 				end
 			end)
@@ -41245,6 +41302,9 @@ do
 	end
 
 	function A.Apply(win)
+		pcall(function()
+			if A.WatchCanvas then A.WatchCanvas(win) end
+		end)
 		if win then
 			apply(win)
 		else
