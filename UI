@@ -41535,7 +41535,18 @@ do
 				
 				pcall(function()
 					if o:IsA("ImageLabel") or o:IsA("ImageButton") then
-						if (o.ImageTransparency or 0) < 0.95 then
+						local img = tostring(o.Image or "")
+						
+						
+						
+						
+						local skip =
+							img:find("rbxthumb://", 1, true) ~= nil
+							or img:find("rbxasset://", 1, true) ~= nil
+							or string.sub(tostring(o.Name), 1, 3) == "CX_"
+							or (o:FindFirstAncestor("CX_Base") ~= nil)
+
+						if not skip and (o.ImageTransparency or 0) < 0.95 then
 							local c = o.ImageColor3
 							local nearWhite = c and c.R > 0.80 and c.G > 0.80 and c.B > 0.80
 							local sz = o.AbsoluteSize
@@ -41544,7 +41555,8 @@ do
 								big = (sz.X >= winSize.X * 0.25) or (sz.Y >= winSize.Y * 0.25)
 							end
 							
-							if nearWhite and (big or (o.ZIndex or 0) > 0) then
+							local isAssetId = img:find("rbxassetid://", 1, true) ~= nil
+							if nearWhite and isAssetId and (big or (o.ZIndex or 0) > 0) then
 								o.ImageTransparency = 1
 							end
 						end
