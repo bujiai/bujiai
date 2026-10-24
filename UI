@@ -40668,10 +40668,27 @@ do
 			bg.ScaleType = Enum.ScaleType.Stretch
 
 			
-			if bg:IsA("ImageLabel") then
-				bg.BackgroundColor3 = T.Purple1
-				bg.BackgroundTransparency = 0
-			end
+			bg.BackgroundColor3 = T.Purple1
+			bg.BackgroundTransparency = 0
+
+			
+			
+			keep(bg:GetPropertyChangedSignal("BackgroundColor3"):Connect(function()
+				if bg.BackgroundColor3 ~= T.Purple1 then
+					bg.BackgroundColor3 = T.Purple1
+				end
+			end))
+			keep(bg:GetPropertyChangedSignal("BackgroundTransparency"):Connect(function()
+				if bg.BackgroundTransparency ~= 0 then
+					bg.BackgroundTransparency = 0
+				end
+			end))
+			keep(bg:GetPropertyChangedSignal("Image"):Connect(function()
+				if bg.Image ~= "" then
+					bg.Image = ""
+					bg.ImageTransparency = 1
+				end
+			end))
 
 			local g = bg:FindFirstChild("CX_BgGradient")
 			if not g then
@@ -40684,12 +40701,26 @@ do
 
 			
 			
+			
 			local function setCorner(obj)
 				if not obj then return end
-				local uc = obj:FindFirstChildOfClass("UICorner")
+				local function kill()
+					for _, c in ipairs(obj:GetChildren()) do
+						if c:IsA("UICorner") then
+							pcall(function() c:Destroy() end)
+						end
+					end
+				end
 				if (T.Radius or 0) <= 0 then
-					if uc then pcall(function() uc:Destroy() end) end
+					kill()
+					
+					keep(obj.ChildAdded:Connect(function(ch)
+						if ch:IsA("UICorner") then
+							task.defer(function() pcall(function() ch:Destroy() end) end)
+						end
+					end))
 				else
+					local uc = obj:FindFirstChildOfClass("UICorner")
 					if not uc then
 						uc = Instance.new("UICorner")
 						uc.Parent = obj
