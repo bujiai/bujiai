@@ -40559,7 +40559,7 @@ do
 		Enabled    = true,
 		Purple1    = Color3.fromRGB(94, 92, 230),
 		Purple2    = Color3.fromRGB(191, 90, 242),
-		Radius     = 14,   
+		Radius     = 0,    
 
 		Snow       = true,
 		SnowCount  = 12,
@@ -40662,8 +40662,16 @@ do
 		
 		
 		pcall(function()
-			bg.ImageTransparency = 0
-			bg.ImageColor3 = T.Purple1
+			
+			bg.Image = ""
+			bg.ImageTransparency = 1      
+			bg.ScaleType = Enum.ScaleType.Stretch
+
+			
+			if bg:IsA("ImageLabel") then
+				bg.BackgroundColor3 = T.Purple1
+				bg.BackgroundTransparency = 0
+			end
 
 			local g = bg:FindFirstChild("CX_BgGradient")
 			if not g then
@@ -40676,35 +40684,25 @@ do
 
 			
 			
-			local function addCorner(obj, name)
+			local function setCorner(obj)
 				if not obj then return end
 				local uc = obj:FindFirstChildOfClass("UICorner")
-				if not uc then
-					uc = obj:FindFirstChild(name)
+				if (T.Radius or 0) <= 0 then
+					if uc then pcall(function() uc:Destroy() end) end
+				else
+					if not uc then
+						uc = Instance.new("UICorner")
+						uc.Parent = obj
+						keep(uc)
+					end
+					uc.CornerRadius = UDim.new(0, T.Radius)
 				end
-				if not uc then
-					uc = Instance.new("UICorner")
-					uc.Name = name
-					uc.Parent = obj
-					keep(uc)
-				end
-				
-				uc.CornerRadius = UDim.new(0, T.Radius or 14)
 			end
-
-			
-			
-			pcall(function()
-				bg.ScaleType = Enum.ScaleType.Stretch
-			end)
-
-			addCorner(bg, "CX_BgCorner")
-			addCorner(main, "CX_MainCorner")
-
-			
+			setCorner(bg)
+			setCorner(main)
 			pcall(function()
 				local inner = main:FindFirstChild("Main")
-				if inner then addCorner(inner, "CX_InnerCorner") end
+				if inner then setCorner(inner) end
 			end)
 
 			
