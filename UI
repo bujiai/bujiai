@@ -41731,7 +41731,21 @@ do
 						for _, o in ipairs(root:GetDescendants()) do
 							local sz = o.Size
 							local full = sz and sz.X.Scale >= 0.9 and sz.Y.Scale >= 0.9
-							if full then
+
+							
+							
+							local white = false
+							if o:IsA("Frame") then
+								local c = o.BackgroundColor3
+								white = c and c.R > 0.92 and c.G > 0.92 and c.B > 0.92
+									and (o.BackgroundTransparency or 0) < 0.95
+							elseif o:IsA("ImageLabel") or o:IsA("ImageButton") then
+								local c = o.ImageColor3
+								white = c and c.R > 0.92 and c.G > 0.92 and c.B > 0.92
+									and (o.ImageTransparency or 0) < 0.95
+							end
+
+							if full or (white and (o.ZIndex or 0) > 0) then
 								if o:IsA("ImageLabel") or o:IsA("ImageButton") then
 									if (o.ImageTransparency or 0) < 0.98 then
 										o.ImageTransparency = 1
@@ -41741,7 +41755,7 @@ do
 										o.BackgroundTransparency = 1
 									end
 								end
-								o.Active = false
+								if full then o.Active = false end
 							end
 						end
 					end
