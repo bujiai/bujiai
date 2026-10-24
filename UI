@@ -41471,11 +41471,21 @@ do
 			
 			
 			pcall(function()
-				for _, uc0 in ipairs(main:GetChildren()) do
-					if uc0:IsA("UICorner") then
-						uc0:Destroy()
+				local function killCorner()
+					for _, uc0 in ipairs(main:GetChildren()) do
+						if uc0:IsA("UICorner") then
+							pcall(function() uc0:Destroy() end)
+						end
 					end
 				end
+				killCorner()
+				
+				local conn = main.ChildAdded:Connect(function(ch)
+					if ch:IsA("UICorner") then
+						task.defer(function() pcall(function() ch:Destroy() end) end)
+					end
+				end)
+				keep(conn)
 			end)
 
 			pcall(function()
@@ -41504,19 +41514,11 @@ do
 			
 			
 			
-			
-			
-			
 			local C1 = Color3.fromRGB(94, 92, 230)    
 			local C2 = Color3.fromRGB(191, 90, 242)   
 			local g = Instance.new("UIGradient")
 			g.Name = "CX_BaseGradient"
-			g.Color = ColorSequence.new({
-				ColorSequenceKeypoint.new(0.00, C1),
-				ColorSequenceKeypoint.new(0.45, C2),
-				ColorSequenceKeypoint.new(1.00, C1),
-			})
-			g.Rotation = 90
+			g.Color = ColorSequence.new(C1, C2)
 			g.Parent = base
 			keep(g)
 
