@@ -41480,11 +41480,15 @@ do
 			end)
 
 			
-			local radius = 12
-			local c = Instance.new("UICorner")
-			c.CornerRadius = UDim.new(0, radius)
-			c.Parent = base
-			keep(c)
+			
+			
+			local radius = 0
+			if radius > 0 then
+				local c = Instance.new("UICorner")
+				c.CornerRadius = UDim.new(0, radius)
+				c.Parent = base
+				keep(c)
+			end
 
 			
 			
@@ -41510,9 +41514,11 @@ do
 			task.spawn(function()
 				task.wait(3)
 				pcall(function()
-					local b = main:FindFirstChild("CX_Base")
+					
+					local host = main.Parent or main
+					local b = host:FindFirstChild("CX_Base") or main:FindFirstChild("CX_Base")
 					if not b then
-						print("[CX_BASE] \228\184\141\229\173\152\229\156\168\239\188\129")
+						print("[CX_BASE] \228\184\141\229\173\152\229\156\168\239\188\129\239\188\136\229\156\168 " .. tostring(host.Name) .. " \229\146\140 main \228\184\139\233\131\189\230\178\161\230\137\190\229\136\176\239\188\137")
 						return
 					end
 					local uc2 = b:FindFirstChildOfClass("UICorner")
@@ -41526,8 +41532,8 @@ do
 					print("[CX_BASE] corner=" .. (uc2 and tostring(uc2.CornerRadius) or "\230\151\160")
 						.. " gradient=" .. (gg and "\230\156\137" or "\230\151\160"))
 					
-					print("[CX_BASE] main \229\173\144\231\186\167\239\188\154")
-					for _, ch in ipairs(main:GetChildren()) do
+					print("[CX_BASE] \231\170\151\229\143\163\230\160\185(" .. tostring(host.Name) .. ") \229\173\144\231\186\167\239\188\154")
+					for _, ch in ipairs(host:GetChildren()) do
 						if ch:IsA("GuiObject") then
 							print(string.format("  %s [%s] z=%d tr=%.2f vis=%s sz=%.0fx%.0f img=%s",
 								ch.Name, ch.ClassName, ch.ZIndex, ch.BackgroundTransparency, tostring(ch.Visible),
