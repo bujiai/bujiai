@@ -41463,10 +41463,20 @@ do
 			
 			
 			
-			local rootHost = main.Parent or main
-			base.Parent = rootHost
-			base.ZIndex = -1
+			
+			base.Parent = main
+			base.ZIndex = 0
 			keep(base)
+
+			
+			
+			pcall(function()
+				for _, uc0 in ipairs(main:GetChildren()) do
+					if uc0:IsA("UICorner") then
+						uc0:Destroy()
+					end
+				end
+			end)
 
 			pcall(function()
 				local innerForBase = main:FindFirstChild("Main") or main
@@ -41514,9 +41524,8 @@ do
 			task.spawn(function()
 				task.wait(3)
 				pcall(function()
-					
-					local host = main.Parent or main
-					local b = host:FindFirstChild("CX_Base") or main:FindFirstChild("CX_Base")
+					local host = main
+					local b = host:FindFirstChild("CX_Base") or (main.Parent and main.Parent:FindFirstChild("CX_Base"))
 					if not b then
 						print("[CX_BASE] \228\184\141\229\173\152\229\156\168\239\188\129\239\188\136\229\156\168 " .. tostring(host.Name) .. " \229\146\140 main \228\184\139\233\131\189\230\178\161\230\137\190\229\136\176\239\188\137")
 						return
