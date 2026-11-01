@@ -25093,7 +25093,21 @@ end
 function p.UpdateFont(r)
 p.Font=r
 for u,v in next,p.FontObjects do
-v.FontFace=Font.new(r,v.FontFace.Weight,v.FontFace.Style)
+
+local _w=Enum.FontWeight.Regular
+local _s=Enum.FontStyle.Normal
+pcall(function()
+local _ff=v.FontFace
+if typeof(_ff.Weight)=="EnumItem"then _w=_ff.Weight end
+if typeof(_ff.Style)=="EnumItem"then _s=_ff.Style end
+end)
+local _ok,_nf=pcall(Font.new,r,_w,_s)
+if _ok and _nf then
+v.FontFace=_nf
+elseif not _CX_FONT_WARN then
+_CX_FONT_WARN=true
+warn("[CX_FONT] Font.new failed r="..tostring(r).." w="..tostring(_w).." s="..tostring(_s).." err="..tostring(_nf))
+end
 end
 end
 
@@ -37574,19 +37588,29 @@ if aw.ScrollBarEnabled then
 
 
 local _cxSBC=aw.UIElements.SideBarContainer
-local _cxPar=nil
-if typeof(_cxSBC)=="Instance"then
-_cxPar=_cxSBC:FindFirstChild("Content")
+if not(typeof(_cxSBC)=="Instance"and _cxSBC:IsA("GuiObject"))then
+if not _CX_UI_DIAG then
+_CX_UI_DIAG=true
+warn("[CX_UI] SideBarContainer BAD type="..typeof(_cxSBC).." val="..tostring(_cxSBC))
 end
+local _fb=Instance.new("Frame")
+_fb.Name="SideBarContainer"
+_fb.BackgroundTransparency=1
+_fb.Size=UDim2.new(0,aw.SideBarWidth or 200,1,-(aw.Topbar and aw.Topbar.Height or 52))
+_fb.Position=UDim2.new(0,0,0,(aw.Topbar and aw.Topbar.Height or 52))
+_fb.Parent=aw.UIElements.Main
+aw.UIElements.SideBarContainer=_fb
+_cxSBC=_fb
+end
+local _cxPar=nil
+if typeof(_cxSBC)=="Instance"then _cxPar=_cxSBC:FindFirstChild("Content")end
 if typeof(_cxPar)~="Instance"then _cxPar=_cxSBC end
 if typeof(_cxPar)~="Instance"then _cxPar=aw.UIElements.SideBar end
-if typeof(_cxPar)=="Instance"then
-pcall(as,aw.UIElements.SideBar,_cxPar,aw,3,av.WindUI)
-end
+if typeof(_cxPar)=="Instance"then pcall(as,aw.UIElements.SideBar,_cxPar,aw,3,av.WindUI)end
 end
 
 aw.UIElements.MainBar=ao("Frame",{
-Size=UDim2.new(1,-aw.UIElements.SideBarContainer.AbsoluteSize.X,1,-aw.Topbar.Height),
+Size=UDim2.new(1,-(((aw.UIElements.SideBarContainer or {}).AbsoluteSize or {}).X or aw.SideBarWidth or 200),1,-aw.Topbar.Height),
 Position=UDim2.new(1,0,1,0),
 AnchorPoint=Vector2.new(1,1),
 BackgroundTransparency=1,
@@ -37655,7 +37679,7 @@ end
 f=ao("TextButton",{
 Size=UDim2.new(
 0,
-aw.UIElements.SideBarContainer.AbsoluteSize.X-(aw.UIPadding/2),
+(((aw.UIElements.SideBarContainer or {}).AbsoluteSize or {}).X or aw.SideBarWidth or 200)-(aw.UIPadding/2),
 0,
 42+aw.UIPadding
 ),
