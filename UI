@@ -25378,6 +25378,8 @@ end
 
 for z,A in next,u or{}do
 if z~="ThemeTag"then
+
+if z=="Parent"and A~=nil and typeof(A)~="Instance"then A=nil end
 x[z]=A
 end
 if p.Localization and p.Localization.Enabled and z=="Text"then
@@ -37569,13 +37571,18 @@ aw.UIElements.SideBar,
 })
 
 if aw.ScrollBarEnabled then
-as(
-aw.UIElements.SideBar,
-aw.UIElements.SideBarContainer.Content,
-aw,
-3,
-av.WindUI
-)
+
+
+local _cxSBC=aw.UIElements.SideBarContainer
+local _cxPar=nil
+if typeof(_cxSBC)=="Instance"then
+_cxPar=_cxSBC:FindFirstChild("Content")
+end
+if typeof(_cxPar)~="Instance"then _cxPar=_cxSBC end
+if typeof(_cxPar)~="Instance"then _cxPar=aw.UIElements.SideBar end
+if typeof(_cxPar)=="Instance"then
+pcall(as,aw.UIElements.SideBar,_cxPar,aw,3,av.WindUI)
+end
 end
 
 aw.UIElements.MainBar=ao("Frame",{
@@ -39964,6 +39971,8 @@ end
 
 
 
+
+
 do
 	local CX = {
 		Enabled    = true,    
@@ -40464,6 +40473,9 @@ do
 end
 
 
+
+
+
 do
 	local RB = {
 		Enabled  = true,
@@ -40552,6 +40564,7 @@ do
 	end
 
 	
+
 
 
 do
@@ -40908,6 +40921,9 @@ local origCreateWindow = aa.CreateWindow
 end
 
 
+
+
+
 do
 	local H = {
 		Enabled   = false,   
@@ -41219,6 +41235,9 @@ do
 end
 
 
+
+
+
 do
 	local S = {
 		Enabled      = true,
@@ -41489,6 +41508,9 @@ do
 		return w
 	end
 end
+
+
+
 
 
 do
