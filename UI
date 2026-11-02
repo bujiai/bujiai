@@ -41460,7 +41460,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-02C  white-no-blue / tab-shape-fix / local-blur
+-- Liquid Glass / 2026-11-02E  pure-white / nearplane-fix / blur-covers-ui
 -- CreateWindow({ Style = 1 }) keeps the original purple style.
 -- CreateWindow({ Style = 2 }) selects Liquid Glass; CX_THEME.SetStyle(1/2) switches live.
 -- WhiteWash is exactly 10% opaque. Refraction is an animated optical-edge approximation,
@@ -41474,12 +41474,13 @@ do
 	local WHITE = Color3.new(1, 1, 1)
 	local G = {
 		Name = "LiquidGlass", Radius = 28, TabRadius = 16, ControlRadius = 12,
-		-- 纯白液态玻璃：没有任何蓝色，只靠白覆层 + 深灰遮荫 + 白色亮边
-		Tint = Color3.fromRGB(205, 212, 220), Saturation = 1.0,
-		Base = Color3.fromRGB(28, 30, 34), BaseOpacity = 0.44, TintOpacity = 0.22,
-		WhiteOpacity = 0.10, RimOpacity = 0.55, Refraction = 0.62,
-		Accent = Color3.fromRGB(215, 222, 230), Text = Color3.fromRGB(246, 248, 250),
-		Blur = true, BlurStrength = 1, BlurDistance = 0.06, BlurSegments = 20,
+		-- 纯白液态玻璃：底层不铺任何颜色，只有白色 + 模糊
+		Tint = WHITE, Saturation = 1.0,
+		Base = WHITE, BaseOpacity = 0.26, TintOpacity = 0.22,
+		WhiteOpacity = 0.10, RimOpacity = 0.30, Refraction = 0.62,
+		-- 白底必须配深色前景，否则白字看不见
+		Accent = Color3.fromRGB(62, 66, 72), Text = Color3.fromRGB(40, 42, 46),
+		Blur = true, BlurStrength = 1, BlurDistance = 0.12, BlurSegments = 20,
 		ScaleMin = 0.50, ScaleMax = 1.60, ScaleStep = 0.05,
 		Capsule = true, CapsuleMobileOnly = false,
 	}
@@ -41597,14 +41598,19 @@ do
 			p.Parts[#p.Parts + 1] = { Part = part, Mesh = mesh }
 		end
 		function p:Update(camera, visible)
-			local size, pos = self.Gui.AbsoluteSize, self.Gui.AbsolutePosition
-			if not camera or not visible or size.X < 2 or size.Y < 2 or not G.Blur then
+			local abs, pos0 = self.Gui.AbsoluteSize, self.Gui.AbsolutePosition
+			-- 2px 内缩：3D 玻璃贴在相机前，边缘会因透视穿帮，原生 Acrylic 也做同样内缩
+			local inset = 2
+			local size = Vector2.new(abs.X - inset * 2, abs.Y - inset * 2)
+			local pos = Vector2.new(pos0.X + inset, pos0.Y + inset)
+			if not camera or not visible or size.X < 8 or size.Y < 8 or not G.Blur then
 				if self.Visible then for _, pair in ipairs(self.Parts) do pair.Part.Transparency = 1 end end
 				self.Visible = false
 				return false
 			end
 			st.WorldFolder.Parent = camera
-			local depth = math.clamp(G.BlurDistance, 0.025, 0.09)
+			-- 必须大于相机 NearPlaneZ（默认 0.1），否则整块玻璃被近裁剪面裁掉、根本不可见
+			local depth = math.clamp(G.BlurDistance, 0.12, 0.60)
 			local tl = camera:ViewportPointToRay(pos.X, pos.Y, depth).Origin
 			local tr = camera:ViewportPointToRay(pos.X + size.X, pos.Y, depth).Origin
 			local bl = camera:ViewportPointToRay(pos.X, pos.Y + size.Y, depth).Origin
@@ -41615,7 +41621,8 @@ do
 			local function place(index, x, y, width, height)
 				local pair = self.Parts[index]
 				pair.Part.CFrame = CFrame.fromMatrix(tl + right * (x / size.X) + down * (y / size.Y), cf.XVector, cf.YVector, cf.ZVector)
-				pair.Mesh.Scale = Vector3.new(math.max(0.00001, width * sx), math.max(0.00001, height * sy), 0.00001)
+				-- Z 用 1：Part.Size.Z=0.001 已经是厚度，Mesh.Scale 再乘 1e-5 会让它薄到渲染不出来
+				pair.Mesh.Scale = Vector3.new(math.max(0.00001, width * sx), math.max(0.00001, height * sy), 1)
 				pair.Part.Transparency = 0.98
 			end
 			place(1, size.X / 2, size.Y / 2, size.X, math.max(0.01, size.Y - r * 2))
@@ -41633,20 +41640,16 @@ do
 		return p
 	end
 
-	-- 只保留 5 层：底色 / 10% 白覆层 / 1px 亮边 / 内弯月面 / 玻璃轮廓。
-	-- 之前叠了 9 层（双渐变 + 厚度带 + 色散边），叠起来发闷、发脏。
+	-- 纯白玻璃只要 4 层：白底 / 10% 白覆层 / 极淡白边 / 玻璃轮廓
 	local function material(st, host, radius, name, blur)
 		local root = passive(st, host, name, 0, radius, G.Base, 1 - G.BaseOpacity, 2)
-		-- 唯一的白色覆层：0.90 透明 = 10% 不透明
 		passive(st, root, "WhiteWash", 0, radius, WHITE, 1 - G.WhiteOpacity, 3)
 		local rim = stroke(st, root, "PixelBrightRim", 1, WHITE, 1 - G.RimOpacity)
 		local rimGradient = create(st, "UIGradient", {
 			Name = "MovingRimLight", Rotation = 32,
-			Color = colorSequence({ {0, WHITE}, {0.45, Color3.fromRGB(228, 233, 239)}, {1, WHITE} }),
-			Transparency = numberSequence({ {0, 0.04}, {0.30, 0.55}, {0.55, 0.92}, {0.80, 0.48}, {1, 0.06} }),
+			Color = colorSequence({ {0, WHITE}, {0.45, Color3.fromRGB(245, 247, 250)}, {1, WHITE} }),
+			Transparency = numberSequence({ {0, 0.30}, {0.30, 0.72}, {0.55, 0.95}, {0.80, 0.66}, {1, 0.32} }),
 		}, rim)
-		local inset = passive(st, root, "InnerMeniscus", 2, radius, WHITE, 1, 4)
-		stroke(st, inset, "InnerLight", 1, Color3.fromRGB(232, 236, 240), 0.82)
 		local lens
 		if type(Creator.NewRoundFrame) == "function" then
 			makingSurface = st
@@ -41673,18 +41676,18 @@ do
 	local function theme()
 		local accent = saturated(G.Accent)
 		return {
-			Name = "LiquidGlass", Accent = G.Tint, Background = G.Base, WindowBackground = G.Base,
-			Text = G.Text, Icon = Color3.fromRGB(200, 206, 214), Placeholder = Color3.fromRGB(140, 146, 154),
-			Primary = accent, Toggle = accent, Slider = accent, Checkbox = accent, SliderIcon = WHITE,
-			Outline = Color3.fromRGB(196, 202, 210), Dialog = Color3.fromRGB(34, 36, 40),
-			Button = Color3.fromRGB(86, 92, 100), PanelBackground = Color3.fromRGB(38, 40, 44), PanelBackgroundTransparency = 0.96,
-			ElementBackground = Color3.fromRGB(128, 134, 142), ElementBackgroundTransparency = 0.82,
-			LabelBackground = Color3.fromRGB(38, 40, 44), LabelBackgroundTransparency = 0.92,
-			TabBackground = Color3.fromRGB(44, 46, 50), TabBackgroundHover = WHITE, TabBackgroundHoverTransparency = 0.90,
-			TabBackgroundActive = Color3.fromRGB(72, 78, 88), TabBackgroundActiveTransparency = 0.72,
+			Name = "LiquidGlass", Accent = G.Accent, Background = G.Base, WindowBackground = G.Base,
+			Text = G.Text, Icon = Color3.fromRGB(92, 96, 102), Placeholder = Color3.fromRGB(142, 146, 152),
+			Primary = accent, Toggle = accent, Slider = accent, Checkbox = accent, SliderIcon = Color3.fromRGB(120, 124, 130),
+			Outline = Color3.fromRGB(200, 204, 210), Dialog = WHITE,
+			Button = Color3.fromRGB(238, 240, 243), PanelBackground = WHITE, PanelBackgroundTransparency = 0.86,
+			ElementBackground = WHITE, ElementBackgroundTransparency = 0.84,
+			LabelBackground = WHITE, LabelBackgroundTransparency = 0.88,
+			TabBackground = WHITE, TabBackgroundHover = Color3.fromRGB(246, 248, 250), TabBackgroundHoverTransparency = 0.80,
+			TabBackgroundActive = Color3.fromRGB(226, 230, 236), TabBackgroundActiveTransparency = 0.70,
 			TabBorder = WHITE, TabBorderTransparency = 1, TabBorderTransparencyActive = 1,
 			TabText = G.Text, TabTitle = G.Text, TabTextTransparency = 0.12, TabTextTransparencyActive = 0,
-			DropdownBackground = Color3.fromRGB(34, 36, 40), DropdownTabBackground = Color3.fromRGB(58, 62, 68),
+			DropdownBackground = WHITE, DropdownTabBackground = Color3.fromRGB(238, 240, 243),
 			AcrylicMain = G.Base, AcrylicNoise = 0.985,
 		}
 	end
@@ -41748,24 +41751,16 @@ do
 					-- host 是 Squircle 形状图 + AutomaticSize="Y"：
 					--   ① 不能塞 Size=(1,0,1,0) 的子层，否则循环撑高变巨型
 					--   ② 不能加 UICorner，那会把形状图裁掉，视觉上变成超长条
-					-- 只改形状图半径（SliceScale）+ 挂一条 1px 亮边。
+					--   ③ 不加边框（用户要求分区不要框）
+					-- 只改形状图半径（SliceScale），颜色交给主题。
 					local rec = T.Shapes[host]
 					if rec then roundShape(st, host, rec, G.TabRadius) end
-					local rim = stroke(st, host, "CX_TabRim", 1, WHITE, 0.62)
-					entry = { Root = host, Rim = rim }
+					entry = { Root = host }
 					st.TabSurfaces[host] = entry
 					local content = host:FindFirstChild("Frame")
 					if content and content:IsA("GuiObject") then change(st, content, "ZIndex", host.ZIndex + 10) end
-					connect(st, host.MouseEnter, function()
-						if st.Active then animate(st, rim, 0.18, { Transparency = 0.30 }) end
-					end)
-					connect(st, host.MouseLeave, function()
-						if st.Active then animate(st, rim, 0.22, { Transparency = 0.62 }) end
-					end)
 				end
-				local selected = tab.Selected == true or tm.SelectedTab == index
-				animate(st, entry.Rim, 0.24, { Transparency = selected and 0.16 or 0.62 })
-				st.TabSelected[host] = selected
+				st.TabSelected[host] = (tab.Selected == true or tm.SelectedTab == index)
 			end
 		end
 	end
@@ -41959,8 +41954,9 @@ do
 			-- 把焦平面压到极近（0.07），对焦半径压到 0.006：
 			-- 只有相机前 0.064 以内的玻璃几何会被模糊，正常游戏物体（米级）不受影响。
 			-- 这是 Roblox 能做到的最接近「只模糊 UI 后面」的方案（没有屏幕空间局部模糊 API）。
-			effect.FocusDistance = 0.07
-			effect.InFocusRadius = 0.006
+			-- 焦平面必须盖住玻璃深度（0.12），否则玻璃不在模糊范围内
+			effect.FocusDistance = 0.15
+			effect.InFocusRadius = 0.03
 		end
 		effect.NearIntensity = math.clamp(G.BlurStrength, 0, 1)
 		effect.Enabled = true
