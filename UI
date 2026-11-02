@@ -40543,6 +40543,8 @@ do
 	
 	local lastTheme = nil
 	local function pickSeq()
+		-- 样式二统一用样式一那套亮色板（用户要求一比一）
+		if aa.CX_THEME and aa.CX_THEME.Style == 2 then return RB.Sequence end
 		local th = aa.Theme
 		local bg = th and th.Background
 		if bg and math.max(bg.R, bg.G, bg.B) > 0.5 then
@@ -40578,6 +40580,11 @@ do
 
 		
 		lb.TextColor3 = WHITE
+		pcall(function()
+			lb.ZIndex = 200
+			local par = lb.Parent
+			if par and par:IsA("GuiObject") and par.ZIndex < 200 then par.ZIndex = 199 end
+		end)
 
 		if isAuthor and lb.TextTransparency > RB.AuthorTransparency then
 			lb.TextTransparency = RB.AuthorTransparency
@@ -40671,6 +40678,11 @@ local origCreateWindow = aa.CreateWindow
 					local c = lb.TextColor3
 					if c.R < 0.999 or c.G < 0.999 or c.B < 0.999 then
 						lb.TextColor3 = WHITE
+		pcall(function()
+			lb.ZIndex = 200
+			local par = lb.Parent
+			if par and par:IsA("GuiObject") and par.ZIndex < 200 then par.ZIndex = 199 end
+		end)
 					end
 				end
 			end
@@ -41458,7 +41470,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-02Q  rainbow-in-glass / late-inner-bind
+-- Liquid Glass / 2026-11-02R  rainbow-style1-palette / text-on-top
 -- Style 1 = original purple. Style 2 = clear liquid glass.
 -- 玻璃不再用「覆盖 Frame + 多层装饰」，而是直接改控件自身的底色/圆角：
 --   · 零覆盖层 -> 不可能挡住内容
@@ -41677,7 +41689,7 @@ do
 				local pair = self.Parts[index]
 				pair.Part.CFrame = CFrame.fromMatrix(tl + right * (x / size.X) + down * (y / size.Y), cf.XVector, cf.YVector, cf.ZVector)
 				pair.Mesh.Scale = Vector3.new(math.max(0.00001, width * sx), math.max(0.00001, height * sy), 1)
-				pair.Part.Transparency = 0.98
+				pair.Part.Transparency = 0.995
 			end
 			place(1, size.X / 2, size.Y / 2, size.X, math.max(0.01, size.Y - r * 2))
 			for i = 1, segments do
