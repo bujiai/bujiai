@@ -41470,7 +41470,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-02T  fullscreen-blur-mode
+-- Liquid Glass / 2026-11-02U  blur-follows-visibility
 -- Style 1 = original purple. Style 2 = clear liquid glass.
 -- 玻璃不再用「覆盖 Frame + 多层装饰」，而是直接改控件自身的底色/圆角：
 --   · 零覆盖层 -> 不可能挡住内容
@@ -41834,7 +41834,7 @@ do
 		st.Shown = st.Main.Visible ~= false and innerVisible and not st.Window.Closed
 	end
 	local blurFx
-	local function ensureEffect(camera)
+	local function ensureEffect(camera, visible)
 		local mode = tostring(G.BlurMode or "fullscreen")
 		if mode == "fullscreen" then
 			-- 全屏模糊：Roblox 唯一能"均匀覆盖整个画面"的模糊，
@@ -41844,9 +41844,15 @@ do
 				blurFx.Name = "CX_LiquidBlur"
 			end
 			blurFx.Size = math.clamp((tonumber(G.BlurStrength) or 1) * 24, 0, 56)
-			blurFx.Parent = game:GetService("Lighting")
+			-- 窗口全部收起/关闭时必须摘掉，否则关了 UI 画面还是糊的
+			if visible then
+				blurFx.Parent = game:GetService("Lighting")
+				T.BlurStatus = "fullscreen"
+			else
+				blurFx.Parent = nil
+				T.BlurStatus = "inactive"
+			end
 			if effect then effect.Parent = nil end
-			T.BlurStatus = "fullscreen"
 			return
 		end
 		if blurFx then blurFx.Parent = nil end
@@ -41877,13 +41883,14 @@ do
 		if rendering then return end
 		rendering = Run.RenderStepped:Connect(function(dt)
 			dt = math.clamp(tonumber(dt) or 1 / 60, 0, 1 / 30)
-			local camera, anyGlass, anyBlur = World.CurrentCamera, false, false
+			local camera, anyGlass, anyBlur, anyVisible = World.CurrentCamera, false, false, false
 			local dead = {}
 			for _, st in ipairs(T.Instances) do
 				if st.Window.Destroyed or not st.Main.Parent then dead[#dead + 1] = st.Window
 				elseif st.Active and st.Style == 2 then
 					anyGlass = true
 					syncVisibility(st)
+					if st.Shown then anyVisible = true end
 					local vp = camera and camera.ViewportSize
 					if vp and (not st.Viewport or st.Viewport ~= vp) then
 						st.Viewport = vp
@@ -41908,7 +41915,7 @@ do
 			for _, w in ipairs(dead) do T.Detach(w) end
 			if not anyGlass then stopRenderer()
 			elseif camera and G.Blur and G.BlurMode ~= "off" then
-				local ok, err = pcall(ensureEffect, camera)
+				local ok, err = pcall(ensureEffect, camera, anyVisible)
 				-- 不要在这里覆盖 BlurStatus，ensureEffect 内部已经按模式设好了
 				if not ok then T.LastError = tostring(err); T.BlurStatus = "unavailable" end
 			elseif effect then effect.Parent = nil; T.BlurStatus = "inactive" end
