@@ -41460,7 +41460,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-02M  pixel-edge / capsule-ellipse-like-style1
+-- Liquid Glass / 2026-11-02N  rounded-pixel-edge
 -- Style 1 = original purple. Style 2 = clear liquid glass.
 -- 玻璃不再用「覆盖 Frame + 多层装饰」，而是直接改控件自身的底色/圆角：
 --   · 零覆盖层 -> 不可能挡住内容
@@ -41545,8 +41545,24 @@ do
 	local roundShape  -- 前向声明：glassify 要用，但它的实现写在后面
 
 	-- 1px 像素边：凸显玻璃厚度。只给窗口/胶囊加，分区不加。
-	local function pixelEdge(st, gui)
+	-- 关键：UIStroke 加在 ImageLabel 形状图上时**只沿矩形边界**，会画成直角框。
+	-- 形状图控件必须改用 Creator 的 "SquircleOutline" 形状图，那才是沿圆角的边。
+	local function pixelEdge(st, gui, radius)
 		if not instance(gui) then return nil end
+		local rec = T.Shapes[gui]
+		if rec then
+			local edge = gui:FindFirstChild("CX_PixelEdge")
+			if not instance(edge) and type(Creator.NewRoundFrame) == "function" then
+				local ok, img = pcall(Creator.NewRoundFrame, tonumber(radius) or 28, "SquircleOutline", {
+					Name = "CX_PixelEdge", Size = UDim2.fromScale(1, 1),
+					BackgroundTransparency = 1, ImageColor3 = WHITE, ImageTransparency = 0.45,
+					ZIndex = 4, Active = false, Parent = gui,
+				}, {})
+				if ok and instance(img) then edge = own(st, img) end
+			end
+			return edge
+		end
+		-- 普通 Frame（有 UICorner）→ UIStroke 会正常沿圆角走
 		local stk = gui:FindFirstChild("CX_PixelEdge")
 		if not stk then
 			stk = create(st, "UIStroke", {
@@ -41585,13 +41601,13 @@ do
 					gui.ImageColor3 = G.GlassColor
 				end
 			end)
-			if withEdge then pixelEdge(st, gui) end
+			if withEdge then pixelEdge(st, gui, radius) end
 		else
 			-- 普通 Frame（胶囊壳等）：才用 UICorner
 			change(st, gui, "BackgroundColor3", G.GlassColor)
 			change(st, gui, "BackgroundTransparency", 1 - G.GlassOpacity)
 			corner(st, gui, radius, true)
-			if withEdge then pixelEdge(st, gui) end
+			if withEdge then pixelEdge(st, gui, radius) end
 		end
 		-- 保持原图/底色的守护：主题随时会把它刷回去
 		connect(st, gui:GetPropertyChangedSignal("BackgroundColor3"), function()
@@ -41712,6 +41728,12 @@ do
 	local priorShape = Creator.CX_ShapeCreated
 	Creator.CX_ShapeCreated = function(image, wrapper, shape, radius, sizeConnection)
 		if priorShape then priorShape(image, wrapper, shape, radius, sizeConnection) end
+		-- 只有我们自己建的描边形状图才登记连接（detach 时从 Creator.Signals 摘除），
+		-- 原生控件的连接绝不能动，否则会破坏 WindUI 自己的布局监听。
+		if sizeConnection and shape == "SquircleOutline" then
+			local owner = aa.Window and byWindow[aa.Window]
+			if owner then owner.CreatorSignals[sizeConnection] = true end
+		end
 		local rec = { Wrapper = wrapper, Shape = shape, Radius = tonumber(radius) or 0 }
 		T.Shapes[image] = rec
 		local st = aa.Window and byWindow[aa.Window]
