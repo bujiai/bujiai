@@ -41460,7 +41460,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-02K  zero-white / pcall-guarded
+-- Liquid Glass / 2026-11-02L  fix-open-white-flash
 -- Style 1 = original purple. Style 2 = clear liquid glass.
 -- 玻璃不再用「覆盖 Frame + 多层装饰」，而是直接改控件自身的底色/圆角：
 --   · 零覆盖层 -> 不可能挡住内容
@@ -41556,6 +41556,21 @@ do
 			change(st, gui, "ImageTransparency", 1 - G.GlassOpacity)
 			change(st, gui, "BackgroundTransparency", 1)
 			roundShape(st, gui, rec, radius)
+			-- ★ 必须守护：Window:Open() 会把 ImageTransparency 动画到 0（Transparent=false），
+			--   那一瞬间整个窗口变成纯白不透明块，糊满 UI。
+			connect(st, gui:GetPropertyChangedSignal("ImageTransparency"), function()
+				if st.Active and st.Style == 2 then
+					local want = 1 - G.GlassOpacity
+					if math.abs(gui.ImageTransparency - want) > 0.001 then
+						gui.ImageTransparency = want
+					end
+				end
+			end)
+			connect(st, gui:GetPropertyChangedSignal("ImageColor3"), function()
+				if st.Active and st.Style == 2 and gui.ImageColor3 ~= G.GlassColor then
+					gui.ImageColor3 = G.GlassColor
+				end
+			end)
 		else
 			-- 普通 Frame（胶囊壳等）：才用 UICorner
 			change(st, gui, "BackgroundColor3", G.GlassColor)
@@ -42034,6 +42049,12 @@ do
 			legacyIsland(true, w)
 		else
 			-- ★ 玻璃就是 bg 自己：不建任何子层。每一步单独 pcall，任何一步失败只跳过它
+			-- Open() 用 aw.Transparent + TransparencyValue 决定背景透明度动画目标，
+			-- 把它设成「完全透明」才不会在开窗时把玻璃刷成白块。
+			pcall(function()
+				w.Transparent = true
+				aa.TransparencyValue = 1 - G.GlassOpacity
+			end)
 			local okGlass, gerr = pcall(glassify, st, bg, G.Radius)
 			if not okGlass then T.LastError = "glassify: " .. tostring(gerr); warn("[LiquidGlass] " .. T.LastError) end
 			pcall(function() if st.Inner then change(st, st.Inner, "BackgroundTransparency", 1) end end)
