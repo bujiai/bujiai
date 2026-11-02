@@ -41460,7 +41460,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-02N  rounded-pixel-edge
+-- Liquid Glass / 2026-11-02O  exact-perspective-projection
 -- Style 1 = original purple. Style 2 = clear liquid glass.
 -- 玻璃不再用「覆盖 Frame + 多层装饰」，而是直接改控件自身的底色/圆角：
 --   · 零覆盖层 -> 不可能挡住内容
@@ -41653,12 +41653,23 @@ do
 			st.WorldFolder.Parent = camera
 			-- 必须大于相机 NearPlaneZ（默认 0.1），否则整块几何被近裁剪面裁掉
 			local depth = math.clamp(G.BlurDistance, 0.12, 0.60)
-			local tl = camera:ViewportPointToRay(pos.X, pos.Y, depth).Origin
-			local tr = camera:ViewportPointToRay(pos.X + size.X, pos.Y, depth).Origin
-			local bl = camera:ViewportPointToRay(pos.X, pos.Y + size.Y, depth).Origin
+			-- 自己算透视投影，不用 ViewportPointToRay(x,y,depth)：
+			-- 那个在近平面附近精度差、容易被 GuiInset/UIScale 带偏。
+			local vp = camera.ViewportSize
+			local fov = math.rad(camera.FieldOfView)
+			local halfH = math.tan(fov * 0.5) * depth
+			local halfW = halfH * (vp.X / math.max(1, vp.Y))
+			local cf = camera.CFrame
+			local function project(x, y)
+				local nx = (x / math.max(1, vp.X) - 0.5) * 2
+				local ny = (0.5 - y / math.max(1, vp.Y)) * 2
+				return cf * Vector3.new(nx * halfW, ny * halfH, -depth)
+			end
+			local tl = project(pos.X, pos.Y)
+			local tr = project(pos.X + size.X, pos.Y)
+			local bl = project(pos.X, pos.Y + size.Y)
 			local right, down = tr - tl, bl - tl
 			local sx, sy = right.Magnitude / size.X, down.Magnitude / size.Y
-			local cf = camera.CFrame
 			local r = math.min((tonumber(self.Radius) or 28) * (tonumber(self.PixelScale) or 1), size.X / 2, size.Y / 2)
 			local function place(index, x, y, width, height)
 				local pair = self.Parts[index]
