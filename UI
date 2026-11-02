@@ -40587,7 +40587,6 @@ do
 	end
 
 	function RB.Attach(win)
-		if aa.CX_THEME and aa.CX_THEME.Enabled and aa.CX_THEME.Style == 2 then return end
 		if not RB.Enabled or not win then return end
 		local h = holderOf(win)
 		if not h then return end
@@ -40616,7 +40615,6 @@ local origCreateWindow = aa.CreateWindow
 	aa.CX_RAINBOW = RB
 
 	rs.RenderStepped:Connect(function(dt)
-		if aa.CX_THEME and aa.CX_THEME.Enabled and aa.CX_THEME.Style == 2 then return end
 		if not RB.Enabled then return end
 
 		
@@ -41460,7 +41458,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-02P  blur-offset-tunable / control-colors
+-- Liquid Glass / 2026-11-02Q  rainbow-in-glass / late-inner-bind
 -- Style 1 = original purple. Style 2 = clear liquid glass.
 -- 玻璃不再用「覆盖 Frame + 多层装饰」，而是直接改控件自身的底色/圆角：
 --   · 零覆盖层 -> 不可能挡住内容
@@ -41806,7 +41804,14 @@ do
 
 	local function syncVisibility(st)
 		if not st.Active then return end
-		st.Shown = st.Main.Visible ~= false and st.Inner and st.Inner.Visible ~= false and not st.Window.Closed
+		-- Inner 可能比 attach 晚创建，这里每次都补查一次，
+		-- 否则 st.Inner 一直是 nil → Shown 永远 false → 模糊不显示
+		if not instance(st.Inner) then
+			st.Inner = st.Main:FindFirstChild("Main")
+		end
+		local innerVisible = true
+		if instance(st.Inner) then innerVisible = st.Inner.Visible ~= false end
+		st.Shown = st.Main.Visible ~= false and innerVisible and not st.Window.Closed
 	end
 	local function ensureEffect(camera)
 		if not effect then
@@ -42099,7 +42104,22 @@ do
 			refreshTabs(st)
 			makeCapsule(st)
 			legacyIsland(false, w)
-			if st.Inner then connect(st, st.Inner:GetPropertyChangedSignal("Visible"), function() syncVisibility(st) end) end
+			if instance(st.Inner) then
+				connect(st, st.Inner:GetPropertyChangedSignal("Visible"), function() syncVisibility(st) end)
+			end
+			-- Inner 晚创建的情况：挂一次 ChildAdded 补绑
+			if not instance(st.Inner) then
+				local bindInner
+				bindInner = st.Main.ChildAdded:Connect(function(ch)
+					if ch.Name == "Main" then
+						st.Inner = ch
+						connect(st, ch:GetPropertyChangedSignal("Visible"), function() syncVisibility(st) end)
+						if bindInner then bindInner:Disconnect() end
+						syncVisibility(st)
+					end
+				end)
+				own(st, bindInner)
+			end
 			connect(st, main:GetPropertyChangedSignal("Visible"), function() syncVisibility(st) end)
 			fit(st)
 			syncVisibility(st)
