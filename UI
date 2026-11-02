@@ -206,7 +206,7 @@ end
 m:SetRadius(f)
 m:SetType(g)
 
-b.AddSignal(r:GetPropertyChangedSignal"AbsoluteSize",function()
+local CXShapeConnection=b.AddSignal(r:GetPropertyChangedSignal"AbsoluteSize",function()
 local u=GetShape(m.Type)
 if u.AutoChange==false then
 return
@@ -251,6 +251,7 @@ end
 end
 end)
 
+if b.CX_ShapeCreated then b.CX_ShapeCreated(r,m,g,f,CXShapeConnection) end
 return r,m
 end
 
@@ -38920,6 +38921,8 @@ end
 return G
 end
 
+aw.CX_MobileDragFrame=u
+aw.CX_ResizeHandle=az
 function aw.GetUIScale(F,G)
 return av.WindUI.UIScale
 end
@@ -39294,11 +39297,11 @@ L=true
 
 aw:Dialog{
 
-Title="Close Window",
-Content="Do you want to close this window? You will not be able to open it again.",
+Title="关闭窗口",
+Content="确定要关闭窗口吗？关闭后将无法再次打开。",
 Buttons={
 {
-Title="Cancel",
+Title="取消",
 
 Callback=function()
 L=false
@@ -39306,7 +39309,7 @@ end,
 Variant="Secondary",
 },
 {
-Title="Close Window",
+Title="确认关闭",
 
 Callback=function()
 L=false
@@ -40050,6 +40053,7 @@ do
 	end
 
 	function CX.Attach(win, cfg)
+		if aa.CX_THEME and aa.CX_THEME.Enabled and aa.CX_THEME.Style == 2 then return nil end
 		if not CX.Enabled or not win then return nil end
 		if CX.MobileOnly and not cxTouchOnly() then return nil end
 
@@ -40194,6 +40198,7 @@ do
 		local frameCount, elapsed, fps, ping = 0, 0, 0, "--"
 
 		rs.Heartbeat:Connect(function(dt)
+			if not gui or not gui.Parent or not gui.Enabled then return end
 			frameCount = frameCount + 1
 			elapsed = elapsed + (tonumber(dt) or 0)
 			if elapsed >= 1 then
@@ -40347,6 +40352,7 @@ do
 			
 			
 			UIS.InputBegan:Connect(function(input)
+				if not gui or not gui.Parent or not gui.Enabled then return end
 				local t = input.UserInputType
 				if t == Enum.UserInputType.MouseButton1 or t == Enum.UserInputType.Touch then
 					if inBar(input.Position) then
@@ -40376,6 +40382,7 @@ do
 			end)
 
 			UIS.InputChanged:Connect(function(input)
+				if not gui or not gui.Parent or not gui.Enabled then dragging = false; return end
 				if not dragging then return end
 				local t = input.UserInputType
 				if t ~= Enum.UserInputType.MouseMovement and t ~= Enum.UserInputType.Touch then return end
@@ -40580,6 +40587,7 @@ do
 	end
 
 	function RB.Attach(win)
+		if aa.CX_THEME and aa.CX_THEME.Enabled and aa.CX_THEME.Style == 2 then return end
 		if not RB.Enabled or not win then return end
 		local h = holderOf(win)
 		if not h then return end
@@ -40590,693 +40598,6 @@ do
 	
 
 
-do
-	local T = {
-		Enabled    = true,
-
-		-- ★ 样式开关：1 = 样式一（紫渐变直角）  2 = 样式二（ImGui 玻璃白）
-		Style      = 1,
-
-		-- ---------- 样式一参数（原样保留） ----------
-		Purple1    = Color3.fromRGB(94, 92, 230),
-		Purple2    = Color3.fromRGB(191, 90, 242),
-		Radius     = 0,
-
-		Snow       = true,
-		SnowCount  = 8,
-		SnowAlpha  = 0.75,
-
-		UnlockFPS  = true,
-		FPSTarget  = 240,
-
-		Glow          = false,
-		GlowThickness = 2,
-		GlowAlpha     = 0.35,
-
-		Instances  = {},
-	}
-
-	-- ---------- 样式二：ImGui 玻璃白（蓝色主色） ----------
-	-- Dear ImGui 的视觉特征：小圆角、1px 细边框、半透明面板、高饱和蓝 accent。
-	local G = {
-		Name        = "ImGui",
-		Bg          = Color3.fromRGB(248, 250, 253),
-		BgAlpha     = 0.22,                          -- 0=不透明 1=全透明
-		Grad1       = Color3.fromRGB(255, 255, 255),
-		Grad2       = Color3.fromRGB(219, 234, 254), -- 淡淡的蓝，玻璃的"冷"
-		Stroke      = Color3.fromRGB(59, 130, 246),  -- #3B82F6
-		StrokeW     = 1,
-		StrokeAlpha = 0.55,                          -- 描边透明度（0=实线）
-		Radius      = 2,                             -- ImGui 是方角，不是胶囊
-		Snow        = false,
-	}
-	T.ImGui = G
-
-	-- WindUI 原生主题：基于 Light 派生（白底黑字 + 蓝 accent），
-	-- 再把各类面板/控件背景压成半透明 → 玻璃质感。
-	T.Theme = {
-		Name        = "ImGui",
-
-		Accent      = Color3.fromHex("#EFF6FF"),
-		Dialog      = Color3.fromHex("#F8FAFC"),
-		Outline     = Color3.fromHex("#3B82F6"),
-		Text        = Color3.fromHex("#1E293B"),
-		Placeholder = Color3.fromHex("#94A3B8"),
-		Background  = Color3.fromHex("#FFFFFF"),
-		Button      = Color3.fromHex("#3B82F6"),
-		Icon        = Color3.fromHex("#475569"),
-		Toggle      = Color3.fromHex("#3B82F6"),
-		Slider      = Color3.fromHex("#3B82F6"),
-		Checkbox    = Color3.fromHex("#3B82F6"),
-		Primary     = Color3.fromHex("#3B82F6"),
-		SliderIcon  = Color3.fromHex("#64748B"),
-
-		PanelBackground             = Color3.fromHex("#FFFFFF"),
-		PanelBackgroundTransparency = 0.45,
-		LabelBackground             = Color3.fromHex("#FFFFFF"),
-		LabelBackgroundTransparency = 0.55,
-		ElementBackground             = Color3.fromHex("#FFFFFF"),
-		ElementBackgroundTransparency = 0.50,
-
-		TabBackground                  = Color3.fromHex("#FFFFFF"),
-		TabBackgroundHover             = Color3.fromHex("#EFF6FF"),
-		TabBackgroundHoverTransparency = 0.35,
-		TabBackgroundActive             = Color3.fromHex("#DBEAFE"),
-		TabBackgroundActiveTransparency = 0.30,
-
-		DropdownTabBackground = Color3.fromHex("#E2E8F0"),
-		DropdownBackground    = Color3.fromHex("#FFFFFF"),
-	}
-
-	-- 当前样式的视觉参数（一次性取出，闭包捕获后不再变）
-	local function visual()
-		if T.Style == 2 then
-			return G.Bg, G.BgAlpha, G.Grad1, G.Grad2,
-				G.Stroke, G.StrokeW, G.StrokeAlpha, G.Radius, G.Snow
-		end
-		return T.Purple1, 0, T.Purple1, T.Purple2,
-			nil, 0, 1, T.Radius, T.Snow
-	end
-
-	-- ===== ImGui 方角化 =====
-	-- WindUI 的圆角不是 UICorner，而是 Creator.NewRoundFrame 生成的 Squircle 形状图
-	-- （ImageLabel + SliceScale = Radius / shape.Radius）。所以从源头压半径，
-	-- 所有按钮 / Tab / 开关 / 滑块 / 分区标题会一起变方角 —— 这才是 ImGui 的观感。
-	-- 记录原始半径，切回样式一时逐条还原。
-	T.Shapes = {}
-
-	local function pruneShapes()
-		if #T.Shapes < 3000 then return end
-		local keep = {}
-		for _, rec in ipairs(T.Shapes) do
-			if rec.Img and rec.Img.Parent ~= nil then keep[#keep + 1] = rec end
-		end
-		T.Shapes = keep
-	end
-
-	local function applyRadius()
-		local target = (T.Style == 2) and G.Radius or nil
-		for _, rec in ipairs(T.Shapes) do
-			local w = rec.W
-			if w and w.SetRadius and rec.Img and rec.Img.Parent ~= nil then
-				local r = target or rec.R
-				if w.GetRadius and w:GetRadius() ~= r then
-					pcall(function() w:SetRadius(r) end)
-				end
-			end
-		end
-	end
-
-	if type(aa.NewRoundFrame) == "function" then
-		local rawNRF = aa.NewRoundFrame
-		aa.NewRoundFrame = function(radius, shapeType, props, children, isButton, retTable)
-			local img, wrap = rawNRF(radius, shapeType, props, children, isButton, retTable)
-			if img and wrap and wrap.SetRadius then
-				pruneShapes()
-				local rec = { Img = img, W = wrap, R = tonumber(radius) or 0, T = shapeType }
-				T.Shapes[#T.Shapes + 1] = rec
-				if T.Style == 2 then
-					pcall(function() wrap:SetRadius(G.Radius) end)
-				end
-			end
-			return img, wrap
-		end
-	end
-
-	-- ===== ImGui 紧凑密度 + 小字号 =====
-	-- ImGui 的 ItemSpacing 很小、字号也小；WindUI 的行距偏松。
-	-- 做法：把 UIListLayout.Padding 按比例压小、TextLabel 字号按比例缩，
-	-- 原值记在 Attribute 里，切回样式一时逐条还原。
-	local DENSITY = 0.72
-	local FONT_SCALE = 0.90
-
-	local function applyDensity(win, on)
-		if not win then return end
-		local main = win.UIElements and win.UIElements.Main
-		if not main then return end
-		local ok, list = pcall(function() return main:GetDescendants() end)
-		if not ok or type(list) ~= "table" then return end
-
-		for _, d in ipairs(list) do
-			pcall(function()
-				if d:IsA("UIListLayout") then
-					if on then
-						if d:GetAttribute("CX_Pad0") == nil then
-							d:SetAttribute("CX_Pad0", d.Padding.Offset)
-						end
-						local p0 = d:GetAttribute("CX_Pad0") or 0
-						d.Padding = UDim.new(0, math.max(1, math.floor(p0 * DENSITY + 0.5)))
-					else
-						local p0 = d:GetAttribute("CX_Pad0")
-						if p0 then d.Padding = UDim.new(0, p0) end
-					end
-				elseif d:IsA("TextLabel") or d:IsA("TextButton") or d:IsA("TextBox") then
-					if on then
-						if d:GetAttribute("CX_FS0") == nil then
-							d:SetAttribute("CX_FS0", d.TextSize)
-						end
-						local s0 = d:GetAttribute("CX_FS0") or d.TextSize
-						if s0 and s0 > 10 then
-							d.TextSize = math.max(9, math.floor(s0 * FONT_SCALE + 0.5))
-						end
-					else
-						local s0 = d:GetAttribute("CX_FS0")
-						if s0 then d.TextSize = s0 end
-					end
-				end
-			end)
-		end
-	end
-
-	-- ===== ImGui Tab 选中指示器 =====
-	-- WindUI 切 Tab 时对选中项调 SetThemeTag(Main, { ImageColor3 = "TabBackgroundActive" })，
-	-- 在这里挂一条底部 2px 蓝条，切走时销毁 —— 这就是 ImGui 的 Tab 下划线。
-	local lastTabObj = nil
-	if type(aa.SetThemeTag) == "function" then
-		local rawSTT = aa.SetThemeTag
-		aa.SetThemeTag = function(obj, tags, dur)
-			local r = rawSTT(obj, tags, dur)
-			pcall(function()
-				if T.Style ~= 2 then return end
-				if type(tags) ~= "table" then return end
-				if tags.ImageColor3 ~= "TabBackgroundActive" then return end
-				if typeof(obj) ~= "Instance" then return end
-
-				if lastTabObj and lastTabObj ~= obj and lastTabObj.Parent then
-					local old = lastTabObj:FindFirstChild("CX_TabInd")
-					if old then old:Destroy() end
-				end
-				lastTabObj = obj
-
-				local ind = obj:FindFirstChild("CX_TabInd")
-				if not ind then
-					ind = Instance.new("Frame")
-					ind.Name = "CX_TabInd"
-					ind.Size = UDim2.new(1, -8, 0, 2)
-					ind.Position = UDim2.new(0, 4, 1, -2)
-					ind.BorderSizePixel = 0
-					ind.ZIndex = 10
-					ind.Parent = obj
-				end
-				ind.BackgroundColor3 = G.Stroke
-				ind.BackgroundTransparency = 0.1
-			end)
-			return r
-		end
-	end
-
-	-- 兜底：有些版本 Tab 走的是 Creator 的局部引用，hook 不到。
-	-- 就低频扫一遍（0.5s，只扫深度 3），谁被染成 TabBackgroundActive 谁就是选中的 Tab。
-	local function scanTabs()
-		local R, GG, B = 219/255, 234/255, 254/255
-		local function mark(d)
-			local c = nil
-			pcall(function() c = d.ImageColor3 end)
-			if c and math.abs(c.R - R) < 0.04
-				and math.abs(c.G - GG) < 0.04
-				and math.abs(c.B - B) < 0.04 then
-				if not d:FindFirstChild("CX_TabInd") then
-					local ind = Instance.new("Frame")
-					ind.Name = "CX_TabInd"
-					ind.Size = UDim2.new(1, -8, 0, 2)
-					ind.Position = UDim2.new(0, 4, 1, -2)
-					ind.BackgroundColor3 = G.Stroke
-					ind.BackgroundTransparency = 0.1
-					ind.BorderSizePixel = 0
-					ind.ZIndex = 10
-					ind.Parent = d
-				end
-			else
-				local ind = d:FindFirstChild("CX_TabInd")
-				if ind then ind:Destroy() end
-			end
-		end
-		local function walk(d, depth)
-			if depth <= 0 then return end
-			for _, c in ipairs(d:GetChildren()) do
-				pcall(mark, c)
-				walk(c, depth - 1)
-			end
-		end
-		for _, inst in ipairs(T.Instances) do
-			local w = inst.Window
-			local main = w and w.UIElements and w.UIElements.Main
-			if main then
-				pcall(function()
-					walk(main:FindFirstChild("Main") or main, 3)
-				end)
-			end
-		end
-	end
-
-	function T.StartTabScan()
-		if T.TabScanning then return end
-		T.TabScanning = true
-		task.spawn(function()
-			while T.TabScanning do
-				task.wait(0.5)
-				if T.Style == 2 and #T.Instances > 0 then
-					pcall(scanTabs)
-				end
-			end
-		end)
-	end
-
-	function T.StopTabScan()
-		T.TabScanning = false
-	end
-
-	-- 解锁帧率（多路兜底）
-	local function unlockFPS(target)
-		pcall(function() if setfpscap then setfpscap(target) end end)
-		pcall(function()
-			local s = settings and settings()
-			if s and s.SetFPSLimit then s:SetFPSLimit(target) end
-		end)
-	end
-
-	-- 雪花
-	local function makeSnow(parent, inst)
-		local count = tonumber(T.SnowCount) or 12
-		local layer = Instance.new("Frame")
-		layer.Name = "CX_Snow"
-		layer.Size = UDim2.fromScale(1, 1)
-		layer.BackgroundTransparency = 1
-		layer.BorderSizePixel = 0
-		layer.ZIndex = 90
-		layer.ClipsDescendants = true
-		layer.Parent = parent
-		table.insert(inst.Nodes, layer)
-
-		local function fall(fl, delay)
-			local w = layer.AbsoluteSize.X
-			local h = layer.AbsoluteSize.Y
-			if w <= 0 or h <= 0 then
-				task.delay(0.3, function() if fl.Parent then fall(fl, 0) end end)
-				return
-			end
-			local x = math.random() * w
-			fl.Position = UDim2.fromOffset(x, -20)
-			fl.TextTransparency = 1
-			task.spawn(function()
-				task.wait(delay or 0)
-				local dur = 4 + math.random() * 4
-				local t0 = tick()
-				while fl.Parent do
-					local p = (tick() - t0) / dur
-					if p >= 1 then break end
-					local y = -20 + (h + 40) * p
-					fl.Position = UDim2.fromOffset(x + math.sin(p * 6) * 12, y)
-					local a
-					if p < 0.1 then a = p / 0.1
-					elseif p > 0.85 then a = (1 - p) / 0.15
-					else a = 1 end
-					fl.TextTransparency = 1 - (a * T.SnowAlpha)
-					task.wait(0.05)
-				end
-				if fl.Parent then fall(fl, math.random() * 2) end
-			end)
-		end
-
-		for i = 1, count do
-			local fl = Instance.new("TextLabel")
-			fl.Name = "CX_Flake"
-			fl.Size = UDim2.fromOffset(14, 14)
-			fl.BackgroundTransparency = 1
-			fl.BorderSizePixel = 0
-			fl.Text = "*"
-			fl.TextColor3 = Color3.new(1, 1, 1)
-			fl.TextSize = 12 + math.random() * 6
-			fl.Font = Enum.Font.GothamBold
-			fl.TextTransparency = 1
-			fl.ZIndex = 91
-			fl.Parent = layer
-			table.insert(inst.Nodes, fl)
-			fall(fl, math.random() * 3)
-		end
-		return layer
-	end
-
-	-- 挂主题：只改 Background 自己，不造覆盖层
-	local detach
-	local function attach(w)
-		if not T.Enabled or not w then return nil end
-
-		-- 幂等：同一个窗口重复挂载（CreateWindow 包装 + 手动 Attach）时
-		-- 先摘掉旧的，否则雪花/渐变会叠两层
-		for i = #T.Instances, 1, -1 do
-			if T.Instances[i].Window == w then
-				detach(T.Instances[i])
-				table.remove(T.Instances, i)
-			end
-		end
-
-		local ui = w.UIElements
-		local main = ui and ui.Main
-		local bg = main and main.Background
-		if not bg then return nil end
-
-		local C_BG, C_ALPHA, C_G1, C_G2, C_ST, C_STW, C_STA, C_RAD, C_SNOW = visual()
-
-		local inst = { Window = w, Nodes = {} }
-		local function keep(o) table.insert(inst.Nodes, o) return o end
-
-		pcall(function()
-			-- ① 背景：清空形状图，用纯色矩形铺满（直角/小圆角由 UICorner 决定）
-			bg.Image = ""
-			bg.ImageTransparency = 1
-			bg.ScaleType = Enum.ScaleType.Stretch
-			bg.BackgroundColor3 = C_BG
-			bg.BackgroundTransparency = C_ALPHA
-
-			-- 守护：WindUI 的 SetTheme / SetBackgroundTransparency 会改这几个
-			keep(bg:GetPropertyChangedSignal("BackgroundColor3"):Connect(function()
-				if bg.BackgroundColor3 ~= C_BG then bg.BackgroundColor3 = C_BG end
-			end))
-			keep(bg:GetPropertyChangedSignal("BackgroundTransparency"):Connect(function()
-				if bg.BackgroundTransparency ~= C_ALPHA then bg.BackgroundTransparency = C_ALPHA end
-			end))
-			keep(bg:GetPropertyChangedSignal("Image"):Connect(function()
-				if bg.Image ~= "" then
-					bg.Image = ""
-					bg.ImageTransparency = 1
-				end
-			end))
-
-			-- ② 渐变
-			local g = bg:FindFirstChild("CX_BgGradient")
-			if not g then
-				g = Instance.new("UIGradient")
-				g.Name = "CX_BgGradient"
-				g.Parent = bg
-				keep(g)
-			end
-			g.Color = ColorSequence.new(C_G1, C_G2)
-
-			-- ③ 描边（样式二才有；样式一要清掉）
-			local st = bg:FindFirstChild("CX_Stroke")
-			if C_ST then
-				if not st then
-					st = Instance.new("UIStroke")
-					st.Name = "CX_Stroke"
-					st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-					st.Parent = bg
-					keep(st)
-				end
-				st.Color = C_ST
-				st.Thickness = C_STW
-				st.Transparency = C_STA
-			elseif st then
-				pcall(function() st:Destroy() end)
-			end
-
-			-- ④ 圆角
-			local function setCorner(obj)
-				if not obj then return end
-				local function kill()
-					for _, c in ipairs(obj:GetChildren()) do
-						if c:IsA("UICorner") then
-							pcall(function() c:Destroy() end)
-						end
-					end
-				end
-				if (C_RAD or 0) <= 0 then
-					kill()
-					-- 持续监听：WindUI 重建 UICorner 立刻销毁
-					keep(obj.ChildAdded:Connect(function(ch)
-						if ch:IsA("UICorner") then
-							task.defer(function() pcall(function() ch:Destroy() end) end)
-						end
-					end))
-				else
-					local uc = obj:FindFirstChildOfClass("UICorner")
-					if not uc then
-						uc = Instance.new("UICorner")
-						uc.Parent = obj
-						keep(uc)
-					end
-					uc.CornerRadius = UDim.new(0, C_RAD)
-				end
-			end
-			setCorner(bg)
-			setCorner(main)
-			pcall(function()
-				local inner = main:FindFirstChild("Main")
-				if inner then setCorner(inner) end
-			end)
-
-			-- ⑤ main 全透明：只留 bg 一层（否则两层叠着颜色不对）
-			pcall(function()
-				if main:IsA("GuiObject") then main.BackgroundTransparency = 1 end
-			end)
-			pcall(function()
-				local inner = main:FindFirstChild("Main")
-				if inner and inner:IsA("GuiObject") then inner.BackgroundTransparency = 1 end
-			end)
-
-			keep(bg:GetPropertyChangedSignal("ImageColor3"):Connect(function()
-				if bg.ImageColor3 ~= C_BG then bg.ImageColor3 = C_BG end
-			end))
-			keep(bg:GetPropertyChangedSignal("ImageTransparency"):Connect(function()
-				if bg.ImageTransparency ~= 0 then bg.ImageTransparency = 0 end
-			end))
-
-			-- ⑥ ImGui 的标题栏下方有一条 1px 分隔线（样式二专属）
-			if C_ST then
-				local tb = nil
-				pcall(function()
-					local mm = main:FindFirstChild("Main")
-					tb = mm and mm:FindFirstChild("Topbar")
-				end)
-				if tb then
-					local sep = tb:FindFirstChild("CX_Sep")
-					if not sep then
-						sep = Instance.new("Frame")
-						sep.Name = "CX_Sep"
-						sep.Size = UDim2.new(1, 0, 0, 1)
-						sep.Position = UDim2.new(0, 0, 1, -1)
-						sep.BorderSizePixel = 0
-						sep.ZIndex = 6
-						sep.Parent = tb
-						keep(sep)
-					end
-					sep.BackgroundColor3 = C_ST
-					sep.BackgroundTransparency = 0.82
-				end
-			end
-
-			-- ⑦ ImGui 控件 1px 边框（样式二）
-			-- WindUI 的控件圆角是 Squircle 形状图，直接在形状上加 UIStroke 就是沿形描边。
-			-- 只给「父级是按钮/输入框」的 Squircle 加，避免给几百个装饰形状都挂描边。
-			if C_ST then
-				local function edge(d)
-					pcall(function()
-						if not (d:IsA("ImageLabel") or d:IsA("ImageButton")) then return end
-						if d.Name ~= "Squircle" then return end
-						local par = d.Parent
-						if not par then return end
-						if not (par:IsA("GuiButton") or par:IsA("TextBox")) then return end
-						local stk = d:FindFirstChild("CX_Edge")
-						if not stk then
-							stk = Instance.new("UIStroke")
-							stk.Name = "CX_Edge"
-							stk.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-							stk.Parent = d
-						end
-						stk.Color = C_ST
-						stk.Thickness = 1
-						stk.Transparency = 0.75
-					end)
-				end
-				for _, d in ipairs(main:GetDescendants()) do edge(d) end
-				keep(main.DescendantAdded:Connect(edge))
-			end
-		end)
-
-		-- ⑥ 紧凑密度 + 小字号（样式二）
-		if C_ST then
-			pcall(function() applyDensity(w, true) end)
-		end
-
-		-- ⑦ 雪花（样式二默认关）
-		if C_SNOW then
-			pcall(function() keep(makeSnow(main, inst)) end)
-		end
-
-		-- ⑦ 四周自发光（默认关）
-		if T.Glow then
-			pcall(function()
-				local stroke = Instance.new("UIStroke")
-				stroke.Name = "CX_Glow"
-				stroke.Thickness = T.GlowThickness
-				stroke.Color = (C_ST or T.Purple2)
-				stroke.Transparency = 1 - T.GlowAlpha
-				stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-				stroke.Parent = bg
-				keep(stroke)
-			end)
-		end
-
-		table.insert(T.Instances, inst)
-		return inst
-	end
-
-	function detach(inst)
-		if not inst then return end
-		for _, o in ipairs(inst.Nodes or {}) do
-			pcall(function()
-				if typeof(o) == "Instance" then
-					o:Destroy()
-				elseif typeof(o) == "RBXScriptConnection" then
-					o:Disconnect()
-				end
-			end)
-		end
-		-- 控件边框 / Tab 指示器是按需挂在各控件上的，没进 Nodes，单独清
-		pcall(function()
-			local w = inst.Window
-			local main = w and w.UIElements and w.UIElements.Main
-			if not main then return end
-			for _, d in ipairs(main:GetDescendants()) do
-				local stk = d:FindFirstChild("CX_Edge")
-				if stk then stk:Destroy() end
-				local ind = d:FindFirstChild("CX_TabInd")
-				if ind then ind:Destroy() end
-			end
-		end)
-		-- 密度/字号还原
-		pcall(function() applyDensity(inst.Window, false) end)
-		inst.Nodes = {}
-	end
-
-	function T.SetEnabled(on)
-		T.Enabled = on and true or false
-		for _, inst in ipairs(T.Instances) do
-			if T.Enabled then
-				pcall(function() attach(inst.Window) end)
-			else
-				detach(inst)
-			end
-		end
-	end
-
-	-- 把 WindUI 主题挂上去（幂等）
-	local function ensureTheme(W)
-		if not W then return false end
-		if not T.Theme then return false end
-		if W.Themes and W.Themes["ImGui"] then return true end
-		local ok = pcall(function() W:AddTheme(T.Theme) end)
-		return ok
-	end
-
-	-- ★ 切换样式：视觉层重建 + WindUI 控件配色跟着换
-	function T.SetStyle(n)
-		n = tonumber(n) or 1
-		if n ~= 1 and n ~= 2 then n = 1 end
-		local changed = (T.Style ~= n)
-		T.Style = n
-
-		-- 方角化：已有控件的形状图按新样式重设半径
-		pcall(applyRadius)
-
-		if changed then
-			local wins = {}
-			for _, inst in ipairs(T.Instances) do
-				wins[#wins + 1] = inst.Window
-			end
-			for _, inst in ipairs(T.Instances) do detach(inst) end
-			T.Instances = {}
-			for _, w in ipairs(wins) do
-				pcall(function() attach(w) end)
-			end
-			-- 密度/字号按新样式统一刷一遍（attach 只在样式二里调，切回时得在这里恢复）
-			for _, w in ipairs(wins) do
-				pcall(function() applyDensity(w, n == 2) end)
-			end
-		end
-
-		local W = T.WindUI
-		if W and W.SetTheme then
-			pcall(function()
-				if n == 2 then
-					ensureTheme(W)
-					W:SetTheme("ImGui")
-				else
-					W:SetTheme("Dark")
-				end
-			end)
-		end
-
-		-- Tab 下划线：样式二才需要扫
-		if n == 2 then
-			pcall(T.StartTabScan)
-		else
-			pcall(T.StopTabScan)
-		end
-		return T.Style
-	end
-
-	function T.Toggle()
-		return T.SetStyle(T.Style == 2 and 1 or 2)
-	end
-
-	T.Attach = attach
-
-	-- 包装 CreateWindow
-	local themeOrig = aa.CreateWindow
-	aa.CreateWindow = function(self, cfg)
-		-- 按「对接」切换：cfg.Style = 1 / 2 直接指定本窗口样式
-		if type(cfg) == "table" and (cfg.Style == 1 or cfg.Style == 2) then
-			T.Style = cfg.Style
-		end
-		-- 记下 WindUI 实例：SetStyle 要调它的 SetTheme
-		if self then T.WindUI = self end
-		if T.Style == 2 then
-			pcall(function() ensureTheme(self) end)
-		end
-
-		local w = themeOrig(self, cfg)
-		pcall(function()
-			if T.UnlockFPS ~= false then unlockFPS(T.FPSTarget or 240) end
-			T.Attach(w)
-		end)
-		-- 样式二：窗口建完再把控件配色切过去（cfg.Theme 可能又把 Dark 应用了一遍）
-		if T.Style == 2 and T.WindUI then
-			pcall(T.StartTabScan)
-			pcall(function()
-				task.defer(function()
-					pcall(function()
-						ensureTheme(T.WindUI)
-						T.WindUI:SetTheme("ImGui")
-					end)
-				end)
-			end)
-		end
-		return w
-	end
-
-	aa.CX_THEME = T
-end
 
 
 local origCreateWindow = aa.CreateWindow
@@ -41295,6 +40616,7 @@ local origCreateWindow = aa.CreateWindow
 	aa.CX_RAINBOW = RB
 
 	rs.RenderStepped:Connect(function(dt)
+		if aa.CX_THEME and aa.CX_THEME.Enabled and aa.CX_THEME.Style == 2 then return end
 		if not RB.Enabled then return end
 
 		
@@ -41965,6 +41287,7 @@ do
 	local cam = workspace.CurrentCamera
 
 	local function apply(win)
+		if aa.CX_THEME and aa.CX_THEME.Enabled and aa.CX_THEME.Style == 2 then return end
 		if not A.Enabled or not win then return end
 		if win.Destroyed then return end
 
@@ -42135,6 +41458,829 @@ do
 			end)
 		end
 	end)
+end
+
+-- Liquid Glass / 2026-11-02A
+-- CreateWindow({ Style = 1 }) keeps the original purple style.
+-- CreateWindow({ Style = 2 }) selects Liquid Glass; CX_THEME.SetStyle(1/2) switches live.
+-- WhiteWash is exactly 10% opaque. Refraction is an animated optical-edge approximation,
+-- not a framebuffer shader. Only our camera DOF/geometry are owned and removed by this module.
+do
+	local Creator = aa.Creator
+	local Run = game:GetService("RunService")
+	local Input = game:GetService("UserInputService")
+	local Tween = game:GetService("TweenService")
+	local World = game:GetService("Workspace")
+	local WHITE = Color3.new(1, 1, 1)
+	local G = {
+		Name = "LiquidGlass", Radius = 28, TabRadius = 16, ControlRadius = 12,
+		Tint = Color3.fromRGB(24, 108, 244), Saturation = 1.45,
+		Base = Color3.fromRGB(15, 47, 105), BaseOpacity = 0.30, TintOpacity = 0.22,
+		WhiteOpacity = 0.10, RimOpacity = 0.68, Refraction = 0.78,
+		Accent = Color3.fromRGB(50, 161, 255), Text = Color3.fromRGB(244, 250, 255),
+		Blur = true, BlurStrength = 1, BlurDistance = 0.06, BlurSegments = 14,
+		ScaleMin = 0.50, ScaleMax = 1.60, ScaleStep = 0.05,
+		Capsule = true, CapsuleMobileOnly = false,
+	}
+	local T = {
+		Version = "LiquidGlass-20261102A", Enabled = true, Style = 1,
+		Purple1 = Color3.fromRGB(94, 92, 230), Purple2 = Color3.fromRGB(191, 90, 242),
+		Radius = 0, Snow = true, SnowCount = 8, SnowAlpha = 0.75,
+		UnlockFPS = true, FPSTarget = 240, Glow = false, GlowThickness = 2, GlowAlpha = 0.35,
+		Glass = G, Instances = {}, Shapes = setmetatable({}, { __mode = "k" }),
+		LastError = nil, BlurStatus = "inactive", RefractionMode = "optical-edge simulation",
+	}
+	aa.CX_THEME = T
+	aa.CX_LIQUID = T
+	local byWindow = setmetatable({}, { __mode = "k" })
+	local rendering, effect, makingSurface = nil, nil, false
+	local detach, attach, refreshTabs, makeCapsule
+	local oldTheme = aa.Theme and aa.Theme.Name or "Dark"
+	local originalAcrylic = aa.ToggleAcrylic
+	local acrylicBaseline
+
+	local function instance(o)
+		return typeof(o) == "Instance"
+	end
+	local function own(st, o)
+		st.Nodes[#st.Nodes + 1] = o
+		return o
+	end
+	local function connect(st, signal, callback)
+		return own(st, signal:Connect(callback))
+	end
+	local function create(st, class, props, parent)
+		local o = own(st, Instance.new(class))
+		for k, v in pairs(props or {}) do o[k] = v end
+		o.Parent = parent
+		return o
+	end
+	local function change(st, o, key, value)
+		if not instance(o) then return end
+		local saved = st.Saved[o]
+		if not saved then saved = {}; st.Saved[o] = saved end
+		if not saved[key] then saved[key] = { o[key] } end
+		o[key] = value
+	end
+	local function restore(st)
+		for o, props in pairs(st.Saved) do
+			for key, value in pairs(props) do pcall(function() o[key] = value[1] end) end
+		end
+	end
+	local function animate(st, o, seconds, props, spring)
+		if not st.Active or not instance(o) then return end
+		local prior = st.Tweens[o]
+		if prior then prior:Cancel() end
+		local tw = Tween:Create(o, TweenInfo.new(seconds, spring and Enum.EasingStyle.Back or Enum.EasingStyle.Quint, Enum.EasingDirection.Out), props)
+		st.Tweens[o] = tw
+		tw:Play()
+		return tw
+	end
+	local function corner(st, o, radius, preserve)
+		local c = o:FindFirstChildOfClass("UICorner")
+		if c then
+			if preserve then change(st, c, "CornerRadius", UDim.new(0, radius)) else c.CornerRadius = UDim.new(0, radius) end
+		else
+			c = create(st, "UICorner", { CornerRadius = UDim.new(0, radius) }, o)
+		end
+		return c
+	end
+	local function colorSequence(points)
+		local out = {}
+		for _, point in ipairs(points) do out[#out + 1] = ColorSequenceKeypoint.new(point[1], point[2]) end
+		return ColorSequence.new(out)
+	end
+	local function numberSequence(points)
+		local out = {}
+		for _, point in ipairs(points) do out[#out + 1] = NumberSequenceKeypoint.new(point[1], point[2]) end
+		return NumberSequence.new(out)
+	end
+	local function saturated(color)
+		local h, s, v = color:ToHSV()
+		return Color3.fromHSV(h, math.clamp(s * G.Saturation, 0, 1), v)
+	end
+	local function stroke(st, parent, name, thickness, color, alpha)
+		return create(st, "UIStroke", {
+			Name = name, Thickness = thickness, Color = color,
+			Transparency = alpha, ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			LineJoinMode = Enum.LineJoinMode.Round,
+		}, parent)
+	end
+	local function passive(st, parent, name, inset, radius, color, alpha, z)
+		local o = create(st, "Frame", {
+			Name = name, Size = UDim2.new(1, -inset * 2, 1, -inset * 2),
+			Position = UDim2.fromOffset(inset, inset), BorderSizePixel = 0,
+			BackgroundColor3 = color, BackgroundTransparency = alpha,
+			Active = false, ZIndex = z or 1,
+		}, parent)
+		corner(st, o, math.max(1, radius - inset), false)
+		return o
+	end
+
+	-- A rounded screen-region glass depth mask, with analytic circular slices.
+	-- No existing Lighting or camera effect is enumerated, disabled or recolored.
+	local function projector(st, gui, radius)
+		local p = { Gui = gui, Radius = radius, Parts = {}, Visible = false }
+		local segments = math.clamp(math.floor(G.BlurSegments), 4, 24)
+		if not st.WorldFolder then
+			st.WorldFolder = create(st, "Folder", { Name = "CX_LiquidGeometry" }, World.CurrentCamera)
+		end
+		for i = 1, 1 + segments * 2 do
+			local part = create(st, "Part", {
+				Name = "GlassDepth", Anchored = true, CanCollide = false,
+				CanTouch = false, CanQuery = false, CastShadow = false, Locked = true,
+				Material = Enum.Material.Glass, Color = Color3.new(0, 0, 0),
+				Size = Vector3.new(1, 1, 0.001), Transparency = 1,
+			}, st.WorldFolder)
+			local mesh = create(st, "SpecialMesh", { MeshType = Enum.MeshType.Brick }, part)
+			p.Parts[#p.Parts + 1] = { Part = part, Mesh = mesh }
+		end
+		function p:Update(camera, visible)
+			local size, pos = self.Gui.AbsoluteSize, self.Gui.AbsolutePosition
+			if not camera or not visible or size.X < 2 or size.Y < 2 or not G.Blur then
+				if self.Visible then for _, pair in ipairs(self.Parts) do pair.Part.Transparency = 1 end end
+				self.Visible = false
+				return false
+			end
+			st.WorldFolder.Parent = camera
+			local depth = math.clamp(G.BlurDistance, 0.025, 0.09)
+			local tl = camera:ViewportPointToRay(pos.X, pos.Y, depth).Origin
+			local tr = camera:ViewportPointToRay(pos.X + size.X, pos.Y, depth).Origin
+			local bl = camera:ViewportPointToRay(pos.X, pos.Y + size.Y, depth).Origin
+			local right, down = tr - tl, bl - tl
+			local sx, sy = right.Magnitude / size.X, down.Magnitude / size.Y
+			local cf = camera.CFrame
+			local r = math.min(self.Radius * (self.PixelScale or 1), size.X / 2, size.Y / 2)
+			local function place(index, x, y, width, height)
+				local pair = self.Parts[index]
+				pair.Part.CFrame = CFrame.fromMatrix(tl + right * (x / size.X) + down * (y / size.Y), cf.XVector, cf.YVector, cf.ZVector)
+				pair.Mesh.Scale = Vector3.new(math.max(0.00001, width * sx), math.max(0.00001, height * sy), 0.00001)
+				pair.Part.Transparency = 0.98
+			end
+			place(1, size.X / 2, size.Y / 2, size.X, math.max(0.01, size.Y - r * 2))
+			for i = 1, segments do
+				local y = (i - 0.5) * r / segments
+				local half = math.sqrt(math.max(0, r * r - (r - y) * (r - y)))
+				local width = size.X - r * 2 + half * 2
+				place(1 + i, size.X / 2, y, width, r / segments + 0.01)
+				place(1 + segments + i, size.X / 2, size.Y - y, width, r / segments + 0.01)
+			end
+			self.Visible = true
+			return true
+		end
+		st.Projectors[#st.Projectors + 1] = p
+		return p
+	end
+
+	local function material(st, host, radius, name, blur)
+		local root = passive(st, host, name, 0, radius, G.Base, 1 - G.BaseOpacity, 2)
+		local base = create(st, "UIGradient", {
+			Name = "GlassTint", Rotation = 30,
+			Color = colorSequence({ {0, saturated(G.Tint)}, {0.48, Color3.fromRGB(69, 169, 255)}, {1, Color3.fromRGB(75, 98, 242)} }),
+			Transparency = numberSequence({ {0, 0.04}, {0.5, 0.16}, {1, 0.02} }),
+		}, root)
+		local tint = passive(st, root, "SaturatedTint", 0, radius, saturated(G.Tint), 1 - G.TintOpacity, 2)
+		create(st, "UIGradient", { Color = colorSequence({ {0, Color3.fromRGB(81, 205, 255)}, {1, Color3.fromRGB(92, 104, 255)} }), Rotation = 58 }, tint)
+		-- This is a separate, uniform white layer; 0.90 transparency = 10% opacity.
+		passive(st, root, "WhiteWash", 0, radius, WHITE, 1 - G.WhiteOpacity, 3)
+		local rim = stroke(st, root, "PixelBrightRim", 1, WHITE, 1 - G.RimOpacity)
+		local rimGradient = create(st, "UIGradient", {
+			Name = "MovingRimLight", Rotation = 32,
+			Color = colorSequence({ {0, WHITE}, {0.4, Color3.fromRGB(176, 229, 255)}, {0.7, Color3.fromRGB(202, 218, 255)}, {1, WHITE} }),
+			Transparency = numberSequence({ {0, 0.02}, {0.23, 0.35}, {0.50, 0.91}, {0.76, 0.50}, {1, 0.05} }),
+		}, rim)
+		local inset = passive(st, root, "InnerMeniscus", 2, radius, WHITE, 1, 4)
+		stroke(st, inset, "InnerLight", 1, Color3.fromRGB(213, 241, 255), 0.78)
+		local depth = passive(st, root, "OpticalThickness", 4, radius, WHITE, 1, 4)
+		local depthStroke = stroke(st, depth, "LensDepth", 3, Color3.fromRGB(13, 69, 173), 0.82)
+		local depthGradient = create(st, "UIGradient", { Rotation = 210, Transparency = numberSequence({ {0, 0.85}, {0.4, 0.35}, {0.7, 0.05}, {1, 0.85} }) }, depthStroke)
+		local chroma = passive(st, root, "RefractedEdge", 1, radius, WHITE, 1, 5)
+		local chromaStroke = stroke(st, chroma, "ChromaticEdge", 1, WHITE, 0.79)
+		local chromaGradient = create(st, "UIGradient", {
+			Rotation = 24, Color = colorSequence({ {0, Color3.fromRGB(94, 238, 255)}, {0.45, Color3.fromRGB(123, 172, 255)}, {1, Color3.fromRGB(255, 207, 242)} }),
+			Transparency = numberSequence({ {0, 0.10}, {0.4, 0.92}, {0.75, 0.4}, {1, 0.16} }),
+		}, chromaStroke)
+		local lens
+		if type(Creator.NewRoundFrame) == "function" then
+			makingSurface = st
+			local ok, image = pcall(Creator.NewRoundFrame, radius, "Glass-1.4", {
+				Name = "LensEdge", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
+				ImageColor3 = Color3.fromRGB(199, 234, 255), ImageTransparency = math.clamp(0.72 - G.Refraction * 0.40, 0.2, 0.8),
+				ZIndex = 4, Active = false, Parent = root,
+			}, {})
+			makingSurface = false
+			if ok and instance(image) then
+				lens = own(st, image)
+				create(st, "UIGradient", { Rotation = 35, Transparency = numberSequence({ {0, 0}, {0.5, 0.93}, {1, 0.05} }) }, lens)
+			end
+		end
+		local surface = { Root = root, Rim = rimGradient, Depth = depthGradient, Chroma = chromaGradient,
+			Lens = lens, X = 0, Y = 0, Radius = radius, Visible = true }
+		st.Surfaces[#st.Surfaces + 1] = surface
+		if blur and G.Blur then
+			local ok, p = pcall(projector, st, root, radius)
+			if ok then surface.Projector = p else T.BlurStatus = "unavailable"; T.LastError = tostring(p) end
+		end
+		return surface
+	end
+
+	local function theme()
+		local accent = saturated(G.Accent)
+		return {
+			Name = "LiquidGlass", Accent = G.Tint, Background = G.Base, WindowBackground = G.Base,
+			Text = G.Text, Icon = Color3.fromRGB(226, 241, 255), Placeholder = Color3.fromRGB(172, 207, 241),
+			Primary = accent, Toggle = accent, Slider = accent, Checkbox = accent, SliderIcon = WHITE,
+			Outline = Color3.fromRGB(211, 240, 255), Dialog = Color3.fromRGB(25, 76, 153),
+			Button = Color3.fromRGB(46, 127, 224), PanelBackground = G.Tint, PanelBackgroundTransparency = 0.96,
+			ElementBackground = Color3.fromRGB(103, 167, 244), ElementBackgroundTransparency = 0.85,
+			LabelBackground = G.Tint, LabelBackgroundTransparency = 0.92,
+			TabBackground = G.Tint, TabBackgroundHover = WHITE, TabBackgroundHoverTransparency = 0.90,
+			TabBackgroundActive = accent, TabBackgroundActiveTransparency = 0.74,
+			TabBorder = WHITE, TabBorderTransparency = 1, TabBorderTransparencyActive = 1,
+			TabText = G.Text, TabTitle = G.Text, TabTextTransparency = 0.12, TabTextTransparencyActive = 0,
+			DropdownBackground = Color3.fromRGB(27, 78, 148), DropdownTabBackground = Color3.fromRGB(56, 123, 214),
+			AcrylicMain = G.Base, AcrylicNoise = 0.985,
+		}
+	end
+	local function legacyIsland(visible, win)
+		local cx = aa.CX_ISLAND
+		if not cx then return end
+		local found = false
+		for _, island in ipairs(cx.Instances or {}) do
+			if island.Window == win and island.Gui and island.Gui.Parent then
+				found = true
+				island:SetVisible(visible)
+			end
+		end
+		if visible and not found and cx.Enabled and type(cx.Attach) == "function" then
+			local ok, island = pcall(cx.Attach, win, { Title = win.Title })
+			if ok and island then table.insert(cx.Instances, island) end
+		end
+	end
+	local function roundShape(st, image, rec, radius)
+		if not rec or not rec.Wrapper then return end
+		if st.ShapeSaved[image] == nil then st.ShapeSaved[image] = rec.Wrapper:GetRadius() end
+		rec.Wrapper:SetRadius(radius)
+	end
+	local priorShape = Creator.CX_ShapeCreated
+	Creator.CX_ShapeCreated = function(image, wrapper, shape, radius, sizeConnection)
+		if priorShape then priorShape(image, wrapper, shape, radius, sizeConnection) end
+		if makingSurface then
+			if sizeConnection then
+				own(makingSurface, sizeConnection)
+				makingSurface.CreatorSignals[sizeConnection] = true
+			end
+			return
+		end
+		local rec = { Wrapper = wrapper, Shape = shape, Radius = tonumber(radius) or 0 }
+		T.Shapes[image] = rec
+		local st = aa.Window and byWindow[aa.Window]
+		if st and st.Active and st.Style == 2 and shape == "Squircle" and rec.Radius < 80 then
+			roundShape(st, image, rec, math.max(rec.Radius, G.ControlRadius))
+		end
+	end
+
+	local function styleNode(st, node)
+		if not st.Active or st.Style ~= 2 or not instance(node) then return end
+		if node.Name == "CX_Rainbow" and node:IsA("UIGradient") then change(st, node, "Enabled", false) end
+		if node:IsA("UICorner") and not st.OwnedCorners[node] then
+			local parent = node.Parent
+			if parent and (parent == st.Main or parent == st.Background or parent == st.Inner) then
+				change(st, node, "CornerRadius", UDim.new(0, G.Radius))
+			end
+		end
+	end
+	refreshTabs = function(st)
+		if not st or not st.Active or st.Style ~= 2 then return end
+		local tm = st.Window.TabModule
+		if not tm then return end
+		for index, tab in pairs(tm.Tabs or {}) do
+			local host = tab.UIElements and tab.UIElements.Main
+			if instance(host) then
+				local entry = st.TabSurfaces[host]
+				if not entry then
+					entry = material(st, host, G.TabRadius, "LiquidTab", false)
+					entry.Root.ZIndex = host.ZIndex
+					local content = host:FindFirstChild("Frame")
+					if content and content:IsA("GuiObject") then change(st, content, "ZIndex", host.ZIndex + 10) end
+					st.TabSurfaces[host] = entry
+					local rec = T.Shapes[host]
+					if rec then roundShape(st, host, rec, G.TabRadius) end
+					corner(st, host, G.TabRadius, true)
+					connect(st, host.MouseEnter, function()
+						if not st.Active then return end
+						animate(st, entry.Root, 0.18, { BackgroundTransparency = 0.66 })
+					end)
+					connect(st, host.MouseLeave, function()
+						if st.Active then refreshTabs(st) end
+					end)
+					connect(st, host.InputBegan, function(input)
+						if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+							animate(st, entry.Root, 0.09, { BackgroundTransparency = 0.52 })
+						end
+					end)
+				end
+				local selected = tab.Selected == true or tm.SelectedTab == index
+				animate(st, entry.Root, 0.26, { BackgroundTransparency = selected and 0.52 or 0.90 })
+				st.TabSelected[host] = selected
+			end
+		end
+	end
+	local tm = a.load'ag'
+	local rawTabNew, rawTabSelect = tm.New, tm.SelectTab
+	tm.New = function(...)
+		local result = table.pack(rawTabNew(...))
+		local st = aa.Window and byWindow[aa.Window]
+		if st and st.Style == 2 then refreshTabs(st) end
+		return table.unpack(result, 1, result.n)
+	end
+	tm.SelectTab = function(...)
+		local result = table.pack(rawTabSelect(...))
+		local st = aa.Window and byWindow[aa.Window]
+		if st and st.Style == 2 then refreshTabs(st) end
+		return table.unpack(result, 1, result.n)
+	end
+
+	local function currentScale(w)
+		local ok, value = pcall(function() return w:GetUIScale() end)
+		return ok and tonumber(value) or aa.UIScale or 1
+	end
+	local function fit(st)
+		local camera = World.CurrentCamera
+		local size = st.Window.Size
+		if not camera or not size or st.Manual then return end
+		local vp = camera.ViewportSize
+		local scale = math.clamp(math.min(1, (vp.X - 28) / math.max(1, size.X.Offset), (vp.Y - 100) / math.max(1, size.Y.Offset)), G.ScaleMin, 1)
+		st.AutoApplying = true
+		st.Window:SetUIScale(scale)
+		st.AutoApplying = false
+	end
+	local function button(st, parent, name, label, x, width, callback)
+		local b = create(st, "TextButton", {
+			Name = name, Size = UDim2.fromOffset(width, 40), Position = UDim2.fromOffset(x, 6),
+			BackgroundColor3 = WHITE, BackgroundTransparency = 1, BorderSizePixel = 0,
+			Text = label, TextColor3 = G.Text, TextSize = 20, Font = Enum.Font.GothamMedium,
+			AutoButtonColor = false, Active = true, ZIndex = 12,
+		}, parent)
+		corner(st, b, 20, false)
+		connect(st, b.MouseEnter, function() animate(st, b, 0.18, { BackgroundTransparency = 0.90 }) end)
+		connect(st, b.MouseLeave, function() animate(st, b, 0.24, { BackgroundTransparency = 1 }) end)
+		connect(st, b.InputBegan, function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				st.Capsule.PressGoal = 0.945
+				st.Capsule.ActiveTouch = input
+				animate(st, b, 0.09, { BackgroundTransparency = 0.78 })
+			end
+		end)
+		connect(st, b.Activated, callback)
+		return b
+	end
+	makeCapsule = function(st)
+		if not G.Capsule or (G.CapsuleMobileOnly and not Input.TouchEnabled) then return nil end
+		local parent = aa.ScreenGui and aa.ScreenGui.Parent
+		if not instance(parent) then return nil end
+		local gui = create(st, "ScreenGui", {
+			Name = "WindUILiquidCapsule", ResetOnSpawn = false, IgnoreGuiInset = true,
+			ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 2147483000,
+		}, parent)
+		local outer = create(st, "Frame", {
+			Name = "Capsule", Size = UDim2.fromOffset(260, 52), Position = UDim2.new(0.5, 0, 0, 18),
+			AnchorPoint = Vector2.new(0.5, 0), BackgroundTransparency = 1, BorderSizePixel = 0,
+		}, gui)
+		local shell = create(st, "Frame", {
+			Name = "ElasticShell", Size = UDim2.fromScale(1, 1), Position = UDim2.fromScale(0.5, 0.5),
+			AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, BorderSizePixel = 0,
+		}, outer)
+		local press = create(st, "UIScale", { Name = "SpringScale", Scale = 1 }, shell)
+		local glass = material(st, shell, 26, "CapsuleGlass", true)
+		local cap = { Gui = gui, Frame = outer, Shell = shell, Material = glass, PressScale = press,
+			Press = 1, PressGoal = 1, PressVelocity = 0, Expanded = false, SuppressClick = false }
+		st.Capsule = cap
+		cap.FitScale = create(st, "UIScale", { Name = "CapsuleViewportScale", Scale = 1 }, outer)
+		local function setScale(n)
+			if not st.Active then return end
+			st.Manual = true
+			st.Window:SetUIScale(n)
+		end
+		button(st, shell, "ZoomOut", "-", 5, 38, function() setScale(currentScale(st.Window) - G.ScaleStep) end)
+		button(st, shell, "ZoomIn", "+", 179, 38, function() setScale(currentScale(st.Window) + G.ScaleStep) end)
+		local middle = button(st, shell, "ToggleWindow", "", 45, 130, function()
+			if not cap.SuppressClick then st.Window:Toggle() end
+		end)
+		local title = create(st, "TextLabel", {
+			Name = "CapsuleTitle", Size = UDim2.new(1, -8, 0, 19), Position = UDim2.fromOffset(4, 1),
+			BackgroundTransparency = 1, Text = tostring(st.Window.Title or "WindUI"), TextColor3 = G.Text,
+			TextSize = 12, Font = Enum.Font.GothamMedium, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 13,
+		}, middle)
+		local percent = create(st, "TextLabel", {
+			Name = "ScalePercent", Size = UDim2.new(1, -8, 0, 16), Position = UDim2.fromOffset(4, 20),
+			BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(209, 232, 255),
+			Text = "100%", TextSize = 10, Font = Enum.Font.Gotham, ZIndex = 13,
+		}, middle)
+		cap.Percent = percent
+		local sheet = create(st, "Frame", {
+			Name = "ZoomSheet", Size = UDim2.fromOffset(252, 104), Position = UDim2.new(0.5, 0, 1, 8),
+			AnchorPoint = Vector2.new(0.5, 0), BackgroundTransparency = 1, Visible = false,
+		}, outer)
+		cap.Sheet = sheet
+		cap.SheetMaterial = material(st, sheet, 22, "ZoomSheetGlass", true)
+		local more = button(st, shell, "ExpandZoom", "...", 219, 36, function()
+			cap.Expanded = not cap.Expanded
+			sheet.Visible = cap.Expanded
+			if cap.Expanded then
+				sheet.Position = UDim2.new(0.5, 0, 1, 2)
+				animate(st, sheet, 0.30, { Position = UDim2.new(0.5, 0, 1, 8) }, true)
+			end
+		end)
+		local heading = create(st, "TextLabel", {
+			Size = UDim2.new(1, -24, 0, 22), Position = UDim2.fromOffset(12, 9), BackgroundTransparency = 1,
+			Text = "界面缩放", TextSize = 12, TextColor3 = G.Text, Font = Enum.Font.GothamMedium,
+			TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12,
+		}, sheet)
+		local hit = create(st, "TextButton", {
+			Name = "ZoomSlider", Size = UDim2.fromOffset(220, 28), Position = UDim2.fromOffset(16, 35),
+			BackgroundTransparency = 1, Text = "", Active = true, ZIndex = 12,
+		}, sheet)
+		local track = create(st, "Frame", { Size = UDim2.new(1, 0, 0, 5), Position = UDim2.new(0, 0, 0.5, -2), BackgroundColor3 = WHITE, BackgroundTransparency = 0.82, BorderSizePixel = 0, ZIndex = 13 }, hit)
+		corner(st, track, 3, false)
+		local fill = create(st, "Frame", { Size = UDim2.fromScale(0.5, 1), BackgroundColor3 = G.Accent, BorderSizePixel = 0, ZIndex = 14 }, track)
+		corner(st, fill, 3, false)
+		local thumb = create(st, "Frame", { Size = UDim2.fromOffset(18, 18), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 15 }, track)
+		corner(st, thumb, 9, false)
+		stroke(st, thumb, "ThumbEdge", 1, Color3.fromRGB(183, 224, 255), 0.15)
+		cap.Fill, cap.Thumb, cap.Track = fill, thumb, track
+		local reset = button(st, sheet, "ResetScale", "恢复 100%", 64, 124, function() setScale(1) end)
+		reset.Size, reset.Position, reset.TextSize = UDim2.fromOffset(124, 24), UDim2.fromOffset(64, 71), 11
+		local dragging, sliding, start, origin, touch = false, false, nil, nil, nil
+		local function fromPointer(pos)
+			local width = track.AbsoluteSize.X
+			if width > 0 then
+				local fraction = math.clamp((pos.X - track.AbsolutePosition.X) / width, 0, 1)
+				setScale(G.ScaleMin + fraction * (G.ScaleMax - G.ScaleMin))
+			end
+		end
+		connect(st, middle.InputBegan, function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging, start, origin, touch = true, input.Position, outer.AbsolutePosition + Vector2.new(outer.AbsoluteSize.X / 2, 0), input
+				cap.SuppressClick = false
+			end
+		end)
+		connect(st, hit.InputBegan, function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				sliding, touch = true, input
+				fromPointer(input.Position)
+			end
+		end)
+		connect(st, Input.InputChanged, function(input)
+			if not st.Active then return end
+			if input.UserInputType == Enum.UserInputType.Touch and input ~= touch then return end
+			if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
+			if sliding then fromPointer(input.Position)
+			elseif dragging then
+				local delta = input.Position - start
+				if math.abs(delta.X) + math.abs(delta.Y) > 6 then
+					cap.SuppressClick = true
+					local camera = World.CurrentCamera
+					local vp = camera and camera.ViewportSize or Vector2.new(1920, 1080)
+					local half = outer.AbsoluteSize.X / 2 + 4
+					outer.Position = UDim2.fromOffset(math.clamp(origin.X + delta.X, half, math.max(half, vp.X - half)), math.clamp(origin.Y + delta.Y, 8, math.max(8, vp.Y - 168 * cap.FitScale.Scale)))
+				end
+			end
+		end)
+		connect(st, Input.InputEnded, function(input)
+			if input.UserInputType == Enum.UserInputType.Touch and input ~= touch and input ~= cap.ActiveTouch then return end
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging, sliding, touch = false, false, nil
+				cap.PressGoal, cap.ActiveTouch = 1, nil
+			end
+		end)
+		function cap:SetScale(n) setScale(n); return currentScale(st.Window) end
+		function cap:GetScale() return currentScale(st.Window) end
+		function cap:SetVisible(on) gui.Enabled = on ~= false end
+		function cap:Destroy() if st.Active then T.SetEnabled(false) end end
+		st.Window.LiquidCapsule = cap
+		return cap
+	end
+
+	local function syncVisibility(st)
+		if not st.Active then return end
+		local shown = st.Main.Visible ~= false and st.Inner and st.Inner.Visible ~= false and not st.Window.Closed
+		if st.Glass then st.Glass.Root.Visible = shown end
+		st.Shown = shown
+	end
+	local function ensureEffect(camera)
+		if not effect then
+			effect = Instance.new("DepthOfFieldEffect")
+			effect.Name = "CX_LiquidDepth"
+			effect.FarIntensity = 0
+			effect.FocusDistance = 0.16
+			effect.InFocusRadius = 0.015
+		end
+		effect.NearIntensity = math.clamp(G.BlurStrength, 0, 1)
+		effect.Enabled = true
+		effect.Parent = camera
+	end
+	local function stopRenderer()
+		if rendering then rendering:Disconnect(); rendering = nil end
+		if effect then effect:Destroy(); effect = nil end
+		T.BlurStatus = "inactive"
+	end
+	local function startRenderer()
+		if rendering then return end
+		rendering = Run.RenderStepped:Connect(function(dt)
+			dt = math.clamp(tonumber(dt) or 1 / 60, 0, 1 / 30)
+			local camera, anyGlass, anyBlur = World.CurrentCamera, false, false
+			local pointer = Vector2.new(0, 0)
+			pcall(function() pointer = Input:GetMouseLocation() end)
+			local dead = {}
+			for _, st in ipairs(T.Instances) do
+				if st.Window.Destroyed or not st.Main.Parent then dead[#dead + 1] = st.Window
+				elseif st.Active and st.Style == 2 then
+					anyGlass = true
+					syncVisibility(st)
+					local vp = camera and camera.ViewportSize
+					if vp and (not st.Viewport or st.Viewport ~= vp) then
+						st.Viewport = vp
+						if st.Capsule then st.Capsule.FitScale.Scale = math.clamp((vp.X - 24) / 260, 0.65, 1) end
+						fit(st)
+					end
+					for _, surface in ipairs(st.Surfaces) do
+						local visible = st.Shown
+						if st.Capsule then
+							if surface == st.Capsule.Material then visible = st.Capsule.Gui.Enabled
+							elseif surface == st.Capsule.SheetMaterial then visible = st.Capsule.Gui.Enabled and st.Capsule.Expanded end
+						end
+						if visible and surface.Root.Parent then
+							local pos, size = surface.Root.AbsolutePosition, surface.Root.AbsoluteSize
+							local tx = math.clamp((pointer.X - pos.X) / math.max(1, size.X) - 0.5, -0.6, 0.6)
+							local ty = math.clamp((pointer.Y - pos.Y) / math.max(1, size.Y) - 0.5, -0.6, 0.6)
+							local k = 1 - math.exp(-10 * dt)
+							surface.X, surface.Y = surface.X + (tx - surface.X) * k, surface.Y + (ty - surface.Y) * k
+							surface.Rim.Rotation = 32 + surface.X * 36 + surface.Y * 18
+							surface.Rim.Offset = Vector2.new(surface.X * 0.18, surface.Y * 0.14)
+							surface.Depth.Rotation = 210 + surface.X * 24
+							surface.Chroma.Rotation = 24 - surface.X * 24 + surface.Y * 12
+						end
+						if surface.Projector then
+							local capsuleSurface = st.Capsule and (surface == st.Capsule.Material or surface == st.Capsule.SheetMaterial)
+							surface.Projector.PixelScale = capsuleSurface and st.Capsule.Press * st.Capsule.FitScale.Scale or currentScale(st.Window)
+							local ok, active = pcall(surface.Projector.Update, surface.Projector, camera, visible)
+							if ok then anyBlur = anyBlur or active else T.LastError = tostring(active); T.BlurStatus = "unavailable" end
+						end
+					end
+					local cap = st.Capsule
+					if cap then
+						local force = 380 * (cap.PressGoal - cap.Press) - 31 * cap.PressVelocity
+						cap.PressVelocity = cap.PressVelocity + force * dt
+						cap.Press = cap.Press + cap.PressVelocity * dt
+						cap.PressScale.Scale = math.clamp(cap.Press, 0.90, 1.04)
+						local scale = currentScale(st.Window)
+						cap.Percent.Text = string.format("%d%%  ·  %s", math.floor(scale * 100 + 0.5), st.Shown and "收起" or "展开")
+						local ratio = math.clamp((scale - G.ScaleMin) / (G.ScaleMax - G.ScaleMin), 0, 1)
+						cap.Fill.Size, cap.Thumb.Position = UDim2.fromScale(ratio, 1), UDim2.fromScale(ratio, 0.5)
+					end
+				end
+			end
+			for _, w in ipairs(dead) do T.Detach(w) end
+			if not anyGlass then stopRenderer()
+			elseif camera and anyBlur and G.Blur then
+				local ok, err = pcall(ensureEffect, camera)
+				if ok then T.BlurStatus = "rounded-camera-depth" else T.LastError = tostring(err); T.BlurStatus = "unavailable" end
+			elseif effect then effect.Parent = nil; T.BlurStatus = "inactive" end
+		end)
+	end
+
+	local function snow(st)
+		if not T.Snow then return end
+		st.SnowConnections = {}
+		local layer = create(st, "Frame", { Name = "CX_Snow", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Active = false, ClipsDescendants = true, ZIndex = 90 }, st.Main)
+		for i = 1, T.SnowCount do
+			local flake = create(st, "TextLabel", { Name = "CX_Flake", Size = UDim2.fromOffset(14, 14), BackgroundTransparency = 1,
+				Text = "*", TextColor3 = WHITE, TextSize = 12 + i % 5, Font = Enum.Font.GothamBold, ZIndex = 91 }, layer)
+			local function fall()
+				if not st.Active or not flake.Parent then return end
+				flake.Position = UDim2.new(math.random(), 0, 0, -20)
+				flake.TextTransparency = 1 - T.SnowAlpha
+				local tw = Tween:Create(flake, TweenInfo.new(5 + math.random() * 3, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), { Position = UDim2.new(flake.Position.X.Scale, 0, 1, 20), TextTransparency = 1 })
+				st.Tweens[flake] = tw
+				local conn
+				conn = tw.Completed:Connect(function(state)
+					conn:Disconnect()
+					if state == Enum.PlaybackState.Completed then task.defer(fall) end
+				end)
+				st.SnowConnections[i] = conn
+				tw:Play()
+			end
+			fall()
+		end
+	end
+	detach = function(st)
+		if not st or not st.Active then return end
+		st.Active = false
+		for _, conn in pairs(st.SnowConnections or {}) do pcall(function() conn:Disconnect() end) end
+		for _, tw in pairs(st.Tweens) do pcall(function() tw:Cancel() end) end
+		for _, o in ipairs(st.Nodes) do
+			if typeof(o) == "RBXScriptConnection" then pcall(function() o:Disconnect() end) end
+		end
+		if type(Creator.Signals) == "table" then
+			for i = #Creator.Signals, 1, -1 do
+				if st.CreatorSignals[Creator.Signals[i]] then table.remove(Creator.Signals, i) end
+			end
+		end
+		for image, radius in pairs(st.ShapeSaved) do
+			local rec = T.Shapes[image]
+			if rec then pcall(function() rec.Wrapper:SetRadius(radius) end) end
+		end
+		restore(st)
+		st.Window.CX_LiquidManual = st.Manual
+		st.Window.SetUIScale = st.RawSetScale
+		st.Window.Destroy = st.RawDestroy
+		st.Window.IsOpenButtonEnabled = st.OpenEnabled
+		if st.ResizeSaved then st.Window.Resizable, st.Window.CanResize = st.ResizeSaved[1], st.ResizeSaved[2] end
+		st.Window.CX_Style = nil
+		st.Window.LiquidCapsule = nil
+		if st.NativePaintVisible ~= nil and st.Window.AcrylicPaint then st.Window.AcrylicPaint.Frame.Visible = st.NativePaintVisible end
+		for i = #st.Nodes, 1, -1 do
+			local o = st.Nodes[i]
+			if instance(o) then pcall(function() o:Destroy() end) end
+		end
+		byWindow[st.Window] = nil
+		for i = #T.Instances, 1, -1 do if T.Instances[i] == st then table.remove(T.Instances, i) end end
+	end
+	function T.Detach(w)
+		local st = byWindow[w]
+		if st then detach(st) end
+		local alive = false
+		for _, item in ipairs(T.Instances) do if item.Style == 2 and item.Active then alive = true end end
+		if not alive then
+			stopRenderer()
+			if type(originalAcrylic) == "function" and w and not w.Destroyed and w.AcrylicPaint then
+				originalAcrylic(aa, acrylicBaseline == true and not w.Closed)
+			end
+		end
+	end
+	attach = function(w)
+		if not T.Enabled or not w or w.Destroyed then return nil end
+		local previous = byWindow[w]
+		if previous then detach(previous) end
+		local main = w.UIElements and w.UIElements.Main
+		if not instance(main) then T.LastError = "Window.UIElements.Main is not an Instance"; return nil end
+		local bg = main:FindFirstChild("Background")
+		if not instance(bg) then T.LastError = "Window background missing"; return nil end
+		local st = { Window = w, Main = main, Background = bg, Inner = main:FindFirstChild("Main"),
+			Style = T.Style, Active = true, Manual = w.CX_LiquidManual == true, Nodes = {}, Saved = setmetatable({}, { __mode = "k" }),
+			ShapeSaved = setmetatable({}, { __mode = "k" }), OwnedCorners = setmetatable({}, { __mode = "k" }),
+			Tweens = {}, Surfaces = {}, Projectors = {}, TabSurfaces = {}, TabSelected = {}, CreatorSignals = {},
+			RawDestroy = w.Destroy, RawSetScale = w.SetUIScale, OpenEnabled = w.IsOpenButtonEnabled,
+		}
+		byWindow[w] = st
+		T.Instances[#T.Instances + 1] = st
+		w.CX_Style = st.Style
+		w.Destroy = function(self, ...)
+			local raw = st.RawDestroy
+			T.Detach(w)
+			return raw(self, ...)
+		end
+		change(st, bg, "Image", "")
+		change(st, bg, "ImageTransparency", 1)
+		change(st, main, "BackgroundTransparency", 1)
+		if st.Inner then change(st, st.Inner, "BackgroundTransparency", 1) end
+		if st.Style == 1 then
+			change(st, bg, "BackgroundColor3", T.Purple1)
+			change(st, bg, "BackgroundTransparency", 0)
+			corner(st, bg, T.Radius, true)
+			corner(st, main, T.Radius, true)
+			if st.Inner then corner(st, st.Inner, T.Radius, true) end
+			create(st, "UIGradient", { Name = "CX_BgGradient", Color = ColorSequence.new(T.Purple1, T.Purple2) }, bg)
+			connect(st, bg:GetPropertyChangedSignal("BackgroundColor3"), function() if st.Active and bg.BackgroundColor3 ~= T.Purple1 then bg.BackgroundColor3 = T.Purple1 end end)
+			connect(st, bg:GetPropertyChangedSignal("BackgroundTransparency"), function() if st.Active and bg.BackgroundTransparency ~= 0 then bg.BackgroundTransparency = 0 end end)
+			snow(st)
+			legacyIsland(true, w)
+		else
+			change(st, bg, "BackgroundTransparency", 1)
+			corner(st, bg, G.Radius, true)
+			corner(st, main, G.Radius, true)
+			if st.Inner then corner(st, st.Inner, G.Radius, true) end
+			st.Glass = material(st, bg, G.Radius, "LiquidWindow", true)
+			if acrylicBaseline == nil then acrylicBaseline = w.Acrylic == true end
+			if type(originalAcrylic) == "function" then originalAcrylic(aa, false) end
+			w.IsOpenButtonEnabled = false
+			local openRoot = w.OpenButtonMain and w.OpenButtonMain.Button and w.OpenButtonMain.Button.Parent
+			if instance(openRoot) then change(st, openRoot, "Visible", false)
+			elseif w.OpenButtonMain and type(w.OpenButtonMain.Visible) == "function" then w.OpenButtonMain:Visible(false) end
+			if instance(w.CX_MobileDragFrame) then change(st, w.CX_MobileDragFrame, "Visible", false) end
+			if Input.TouchEnabled and not Input.KeyboardEnabled then
+				st.ResizeSaved = { w.Resizable, w.CanResize }
+				w.Resizable, w.CanResize = false, false
+				if instance(w.CX_ResizeHandle) then
+					change(st, w.CX_ResizeHandle, "Visible", false)
+					change(st, w.CX_ResizeHandle, "Active", false)
+				end
+			end
+			if w.AcrylicPaint and w.AcrylicPaint.Frame then
+				st.NativePaintVisible = w.AcrylicPaint.Frame.Visible
+				w.AcrylicPaint.Frame.Visible = false
+			end
+			w.SetUIScale = function(self, n, ...)
+				n = math.clamp(tonumber(n) or currentScale(w), G.ScaleMin, G.ScaleMax)
+				if not st.AutoApplying then st.Manual = true end
+				return st.RawSetScale(self, n, ...)
+			end
+			for image, rec in pairs(T.Shapes) do
+				if image.Parent and rec.Shape == "Squircle" and rec.Radius < 80 then
+					roundShape(st, image, rec, image == bg and G.Radius or math.max(rec.Radius, G.ControlRadius))
+				end
+			end
+			for _, node in ipairs(main:GetDescendants()) do styleNode(st, node) end
+			connect(st, main.DescendantAdded, function(node) if st.Active then styleNode(st, node) end end)
+			refreshTabs(st)
+			makeCapsule(st)
+			legacyIsland(false, w)
+			if st.Inner then connect(st, st.Inner:GetPropertyChangedSignal("Visible"), function() syncVisibility(st) end) end
+			connect(st, main:GetPropertyChangedSignal("Visible"), function() syncVisibility(st) end)
+			fit(st)
+			syncVisibility(st)
+			startRenderer()
+		end
+		connect(st, main.Destroying, function() T.Detach(w) end)
+		return st
+	end
+	T.Attach = attach
+	function T.RefreshTabs(w) refreshTabs(byWindow[w or aa.Window]) end
+	function T.Refresh() if aa.Window then return attach(aa.Window) end end
+	function T.SetStyle(n)
+		n = tonumber(n) == 2 and 2 or 1
+		if n == 2 and T.Style ~= 2 and aa.Theme and aa.Theme.Name ~= "LiquidGlass" then oldTheme = aa.Theme.Name end
+		local windows = {}
+		for _, st in ipairs(T.Instances) do windows[#windows + 1] = st.Window end
+		for _, w in ipairs(windows) do T.Detach(w) end
+		T.Style = n
+		if n == 2 then T.Theme = theme(); aa:AddTheme(T.Theme); aa:SetTheme("LiquidGlass")
+		else
+			aa:SetTheme(oldTheme)
+			if type(originalAcrylic) == "function" and aa.Window and aa.Window.AcrylicPaint then originalAcrylic(aa, acrylicBaseline == true and not aa.Window.Closed) end
+		end
+		for _, w in ipairs(windows) do
+			if T.Enabled then attach(w) end
+			legacyIsland(n == 1 or not T.Enabled, w)
+		end
+		return n
+	end
+	function T.Toggle() return T.SetStyle(T.Style == 2 and 1 or 2) end
+	function T.SetEnabled(on)
+		local windows = {}
+		for _, st in ipairs(T.Instances) do windows[#windows + 1] = st.Window end
+		if #windows == 0 and aa.Window and not aa.Window.Destroyed then windows[1] = aa.Window end
+		for _, w in ipairs(windows) do T.Detach(w) end
+		T.Enabled = on ~= false
+		if T.Enabled then
+			if T.Style == 2 then T.Theme = theme(); aa:AddTheme(T.Theme); aa:SetTheme("LiquidGlass") end
+			for _, w in ipairs(windows) do attach(w) end
+		else
+			aa:SetTheme(oldTheme)
+			if type(originalAcrylic) == "function" and aa.Window and aa.Window.AcrylicPaint then originalAcrylic(aa, acrylicBaseline == true and not aa.Window.Closed) end
+			for _, w in ipairs(windows) do legacyIsland(true, w) end
+		end
+	end
+	function T.Destroy()
+		T.SetEnabled(false)
+		stopRenderer()
+	end
+	if type(originalAcrylic) == "function" then
+		aa.ToggleAcrylic = function(self, ...)
+			local st = self.Window and byWindow[self.Window]
+			if st and st.Active and st.Style == 2 then return end
+			return originalAcrylic(self, ...)
+		end
+	end
+	local originalCreate = aa.CreateWindow
+	aa.CreateWindow = function(self, config)
+		config = config or {}
+		local cfg = {}
+		for k, v in pairs(config) do cfg[k] = v end
+		local style = cfg.Style ~= nil and (tonumber(cfg.Style) == 2 and 2 or 1) or T.Style
+		T.Style = style
+		if T.Enabled and style == 2 then
+			oldTheme = cfg.Theme or oldTheme
+			T.Theme = theme()
+			aa:AddTheme(T.Theme)
+			aa:SetTheme("LiquidGlass")
+			cfg.Theme, cfg.AutoScale = "LiquidGlass", false
+			local ob = {}
+			for k, v in pairs(cfg.OpenButton or {}) do ob[k] = v end
+			ob.Enabled = false
+			cfg.OpenButton = ob
+		end
+		local w = originalCreate(self, cfg)
+		if w then
+			if acrylicBaseline == nil then acrylicBaseline = config.Acrylic == true end
+			if T.Enabled and style == 2 then w.IsOpenButtonEnabled = not (config.OpenButton and config.OpenButton.Enabled == false) end
+			if T.UnlockFPS and type(setfpscap) == "function" then pcall(setfpscap, T.FPSTarget) end
+			local ok, err = pcall(attach, w)
+			if not ok then T.LastError = tostring(err); T.Detach(w); warn("[LiquidGlass] " .. tostring(err)) end
+		end
+		return w
+	end
 end
 
 return aa
