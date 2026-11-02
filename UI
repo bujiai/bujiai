@@ -41470,7 +41470,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-02R  rainbow-style1-palette / text-on-top
+-- Liquid Glass / 2026-11-02S  blurrect-largest-only
 -- Style 1 = original purple. Style 2 = clear liquid glass.
 -- 玻璃不再用「覆盖 Frame + 多层装饰」，而是直接改控件自身的底色/圆角：
 --   · 零覆盖层 -> 不可能挡住内容
@@ -41700,7 +41700,11 @@ do
 				place(1 + segments + i, size.X / 2, size.Y - y, width, r / segments + 0.01)
 			end
 			self.Visible = true
-			T.BlurRect = { X = pos.X, Y = pos.Y, W = size.X, H = size.Y }
+			-- 只记录**最大的**那一块（窗口），否则会被胶囊/面板的投影覆盖，
+			-- 诊断出来就是 196x34 这种胶囊尺寸，看着像"模糊跑到上面去了"。
+			if not T.BlurRect or size.X * size.Y > T.BlurRect.W * T.BlurRect.H then
+				T.BlurRect = { X = pos.X, Y = pos.Y, W = size.X, H = size.Y }
+			end
 			return true
 		end
 		st.Projectors[#st.Projectors + 1] = p
