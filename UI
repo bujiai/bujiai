@@ -41474,10 +41474,11 @@ do
 	local WHITE = Color3.new(1, 1, 1)
 	local G = {
 		Name = "LiquidGlass", Radius = 28, TabRadius = 16, ControlRadius = 12,
-		Tint = Color3.fromRGB(24, 108, 244), Saturation = 1.45,
-		Base = Color3.fromRGB(15, 47, 105), BaseOpacity = 0.30, TintOpacity = 0.22,
-		WhiteOpacity = 0.10, RimOpacity = 0.68, Refraction = 0.78,
-		Accent = Color3.fromRGB(50, 161, 255), Text = Color3.fromRGB(244, 250, 255),
+		-- 中性偏冷的玻璃：不再用高饱和亮蓝，避免整块发蓝
+		Tint = Color3.fromRGB(72, 108, 160), Saturation = 1.10,
+		Base = Color3.fromRGB(26, 32, 42), BaseOpacity = 0.46, TintOpacity = 0.22,
+		WhiteOpacity = 0.10, RimOpacity = 0.55, Refraction = 0.62,
+		Accent = Color3.fromRGB(70, 130, 200), Text = Color3.fromRGB(240, 246, 252),
 		Blur = true, BlurStrength = 1, BlurDistance = 0.06, BlurSegments = 14,
 		ScaleMin = 0.50, ScaleMax = 1.60, ScaleStep = 0.05,
 		Capsule = true, CapsuleMobileOnly = false,
@@ -41632,50 +41633,35 @@ do
 		return p
 	end
 
+	-- 只保留 5 层：底色 / 10% 白覆层 / 1px 亮边 / 内弯月面 / 玻璃轮廓。
+	-- 之前叠了 9 层（双渐变 + 厚度带 + 色散边），叠起来发闷、发脏。
 	local function material(st, host, radius, name, blur)
 		local root = passive(st, host, name, 0, radius, G.Base, 1 - G.BaseOpacity, 2)
-		local base = create(st, "UIGradient", {
-			Name = "GlassTint", Rotation = 30,
-			Color = colorSequence({ {0, saturated(G.Tint)}, {0.48, Color3.fromRGB(69, 169, 255)}, {1, Color3.fromRGB(75, 98, 242)} }),
-			Transparency = numberSequence({ {0, 0.04}, {0.5, 0.16}, {1, 0.02} }),
-		}, root)
-		local tint = passive(st, root, "SaturatedTint", 0, radius, saturated(G.Tint), 1 - G.TintOpacity, 2)
-		create(st, "UIGradient", { Color = colorSequence({ {0, Color3.fromRGB(81, 205, 255)}, {1, Color3.fromRGB(92, 104, 255)} }), Rotation = 58 }, tint)
-		-- This is a separate, uniform white layer; 0.90 transparency = 10% opacity.
+		-- 唯一的白色覆层：0.90 透明 = 10% 不透明
 		passive(st, root, "WhiteWash", 0, radius, WHITE, 1 - G.WhiteOpacity, 3)
 		local rim = stroke(st, root, "PixelBrightRim", 1, WHITE, 1 - G.RimOpacity)
 		local rimGradient = create(st, "UIGradient", {
 			Name = "MovingRimLight", Rotation = 32,
-			Color = colorSequence({ {0, WHITE}, {0.4, Color3.fromRGB(176, 229, 255)}, {0.7, Color3.fromRGB(202, 218, 255)}, {1, WHITE} }),
-			Transparency = numberSequence({ {0, 0.02}, {0.23, 0.35}, {0.50, 0.91}, {0.76, 0.50}, {1, 0.05} }),
+			Color = colorSequence({ {0, WHITE}, {0.45, Color3.fromRGB(214, 236, 255)}, {1, WHITE} }),
+			Transparency = numberSequence({ {0, 0.04}, {0.30, 0.55}, {0.55, 0.92}, {0.80, 0.48}, {1, 0.06} }),
 		}, rim)
 		local inset = passive(st, root, "InnerMeniscus", 2, radius, WHITE, 1, 4)
-		stroke(st, inset, "InnerLight", 1, Color3.fromRGB(213, 241, 255), 0.78)
-		local depth = passive(st, root, "OpticalThickness", 4, radius, WHITE, 1, 4)
-		local depthStroke = stroke(st, depth, "LensDepth", 3, Color3.fromRGB(13, 69, 173), 0.82)
-		local depthGradient = create(st, "UIGradient", { Rotation = 210, Transparency = numberSequence({ {0, 0.85}, {0.4, 0.35}, {0.7, 0.05}, {1, 0.85} }) }, depthStroke)
-		local chroma = passive(st, root, "RefractedEdge", 1, radius, WHITE, 1, 5)
-		local chromaStroke = stroke(st, chroma, "ChromaticEdge", 1, WHITE, 0.79)
-		local chromaGradient = create(st, "UIGradient", {
-			Rotation = 24, Color = colorSequence({ {0, Color3.fromRGB(94, 238, 255)}, {0.45, Color3.fromRGB(123, 172, 255)}, {1, Color3.fromRGB(255, 207, 242)} }),
-			Transparency = numberSequence({ {0, 0.10}, {0.4, 0.92}, {0.75, 0.4}, {1, 0.16} }),
-		}, chromaStroke)
+		stroke(st, inset, "InnerLight", 1, Color3.fromRGB(226, 242, 255), 0.82)
 		local lens
 		if type(Creator.NewRoundFrame) == "function" then
 			makingSurface = st
 			local ok, image = pcall(Creator.NewRoundFrame, radius, "Glass-1.4", {
 				Name = "LensEdge", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
-				ImageColor3 = Color3.fromRGB(199, 234, 255), ImageTransparency = math.clamp(0.72 - G.Refraction * 0.40, 0.2, 0.8),
+				ImageColor3 = Color3.fromRGB(214, 236, 255), ImageTransparency = math.clamp(0.80 - G.Refraction * 0.30, 0.3, 0.86),
 				ZIndex = 4, Active = false, Parent = root,
 			}, {})
 			makingSurface = false
 			if ok and instance(image) then
 				lens = own(st, image)
-				create(st, "UIGradient", { Rotation = 35, Transparency = numberSequence({ {0, 0}, {0.5, 0.93}, {1, 0.05} }) }, lens)
+				create(st, "UIGradient", { Rotation = 35, Transparency = numberSequence({ {0, 0.10}, {0.5, 0.94}, {1, 0.12} }) }, lens)
 			end
 		end
-		local surface = { Root = root, Rim = rimGradient, Depth = depthGradient, Chroma = chromaGradient,
-			Lens = lens, X = 0, Y = 0, Radius = radius, Visible = true }
+		local surface = { Root = root, Rim = rimGradient, Lens = lens, X = 0, Y = 0, Radius = radius, Visible = true }
 		st.Surfaces[#st.Surfaces + 1] = surface
 		if blur and G.Blur then
 			local ok, p = pcall(projector, st, root, radius)
@@ -41688,17 +41674,17 @@ do
 		local accent = saturated(G.Accent)
 		return {
 			Name = "LiquidGlass", Accent = G.Tint, Background = G.Base, WindowBackground = G.Base,
-			Text = G.Text, Icon = Color3.fromRGB(226, 241, 255), Placeholder = Color3.fromRGB(172, 207, 241),
+			Text = G.Text, Icon = Color3.fromRGB(200, 215, 232), Placeholder = Color3.fromRGB(150, 170, 195),
 			Primary = accent, Toggle = accent, Slider = accent, Checkbox = accent, SliderIcon = WHITE,
-			Outline = Color3.fromRGB(211, 240, 255), Dialog = Color3.fromRGB(25, 76, 153),
-			Button = Color3.fromRGB(46, 127, 224), PanelBackground = G.Tint, PanelBackgroundTransparency = 0.96,
-			ElementBackground = Color3.fromRGB(103, 167, 244), ElementBackgroundTransparency = 0.85,
-			LabelBackground = G.Tint, LabelBackgroundTransparency = 0.92,
-			TabBackground = G.Tint, TabBackgroundHover = WHITE, TabBackgroundHoverTransparency = 0.90,
-			TabBackgroundActive = accent, TabBackgroundActiveTransparency = 0.74,
+			Outline = Color3.fromRGB(190, 210, 232), Dialog = Color3.fromRGB(32, 40, 52),
+			Button = Color3.fromRGB(72, 108, 160), PanelBackground = Color3.fromRGB(40, 50, 64), PanelBackgroundTransparency = 0.96,
+			ElementBackground = Color3.fromRGB(126, 152, 190), ElementBackgroundTransparency = 0.82,
+			LabelBackground = Color3.fromRGB(40, 50, 64), LabelBackgroundTransparency = 0.92,
+			TabBackground = Color3.fromRGB(44, 56, 72), TabBackgroundHover = WHITE, TabBackgroundHoverTransparency = 0.90,
+			TabBackgroundActive = Color3.fromRGB(52, 104, 168), TabBackgroundActiveTransparency = 0.74,
 			TabBorder = WHITE, TabBorderTransparency = 1, TabBorderTransparencyActive = 1,
 			TabText = G.Text, TabTitle = G.Text, TabTextTransparency = 0.12, TabTextTransparencyActive = 0,
-			DropdownBackground = Color3.fromRGB(27, 78, 148), DropdownTabBackground = Color3.fromRGB(56, 123, 214),
+			DropdownBackground = Color3.fromRGB(32, 40, 52), DropdownTabBackground = Color3.fromRGB(58, 76, 98),
 			AcrylicMain = G.Base, AcrylicNoise = 0.985,
 		}
 	end
@@ -41759,29 +41745,26 @@ do
 			if instance(host) then
 				local entry = st.TabSurfaces[host]
 				if not entry then
-					entry = material(st, host, G.TabRadius, "LiquidTab", false)
-					entry.Root.ZIndex = host.ZIndex
-					local content = host:FindFirstChild("Frame")
-					if content and content:IsA("GuiObject") then change(st, content, "ZIndex", host.ZIndex + 10) end
-					st.TabSurfaces[host] = entry
+					-- host 是 AutomaticSize="Y" 容器：往里塞任何 Size=(1,0,1,0) 的子层
+					-- 都会参与高度计算，把分区按钮撑成巨型。
+					-- 所以这里只改自身圆角 + 挂一条 1px 亮边，不建任何子层。
+					corner(st, host, G.TabRadius, true)
 					local rec = T.Shapes[host]
 					if rec then roundShape(st, host, rec, G.TabRadius) end
-					corner(st, host, G.TabRadius, true)
+					local rim = stroke(st, host, "CX_TabRim", 1, WHITE, 0.62)
+					entry = { Root = host, Rim = rim }
+					st.TabSurfaces[host] = entry
+					local content = host:FindFirstChild("Frame")
+					if content and content:IsA("GuiObject") then change(st, content, "ZIndex", host.ZIndex + 10) end
 					connect(st, host.MouseEnter, function()
-						if not st.Active then return end
-						animate(st, entry.Root, 0.18, { BackgroundTransparency = 0.66 })
+						if st.Active then animate(st, rim, 0.18, { Transparency = 0.30 }) end
 					end)
 					connect(st, host.MouseLeave, function()
-						if st.Active then refreshTabs(st) end
-					end)
-					connect(st, host.InputBegan, function(input)
-						if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-							animate(st, entry.Root, 0.09, { BackgroundTransparency = 0.52 })
-						end
+						if st.Active then animate(st, rim, 0.22, { Transparency = 0.62 }) end
 					end)
 				end
 				local selected = tab.Selected == true or tm.SelectedTab == index
-				animate(st, entry.Root, 0.26, { BackgroundTransparency = selected and 0.52 or 0.90 })
+				animate(st, entry.Rim, 0.24, { Transparency = selected and 0.16 or 0.62 })
 				st.TabSelected[host] = selected
 			end
 		end
@@ -41874,7 +41857,7 @@ do
 		}, middle)
 		local percent = create(st, "TextLabel", {
 			Name = "ScalePercent", Size = UDim2.new(1, -8, 0, 16), Position = UDim2.fromOffset(4, 20),
-			BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(209, 232, 255),
+			BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(178, 196, 216),
 			Text = "100%", TextSize = 10, Font = Enum.Font.Gotham, ZIndex = 13,
 		}, middle)
 		cap.Percent = percent
@@ -42018,8 +42001,6 @@ do
 							surface.X, surface.Y = surface.X + (tx - surface.X) * k, surface.Y + (ty - surface.Y) * k
 							surface.Rim.Rotation = 32 + surface.X * 36 + surface.Y * 18
 							surface.Rim.Offset = Vector2.new(surface.X * 0.18, surface.Y * 0.14)
-							surface.Depth.Rotation = 210 + surface.X * 24
-							surface.Chroma.Rotation = 24 - surface.X * 24 + surface.Y * 12
 						end
 						if surface.Projector then
 							local capsuleSurface = st.Capsule and (surface == st.Capsule.Material or surface == st.Capsule.SheetMaterial)
