@@ -41460,7 +41460,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-02A
+-- Liquid Glass / 2026-11-02C  white-no-blue / tab-shape-fix / local-blur
 -- CreateWindow({ Style = 1 }) keeps the original purple style.
 -- CreateWindow({ Style = 2 }) selects Liquid Glass; CX_THEME.SetStyle(1/2) switches live.
 -- WhiteWash is exactly 10% opaque. Refraction is an animated optical-edge approximation,
@@ -42127,6 +42127,10 @@ do
 		end
 		change(st, bg, "Image", "")
 		change(st, bg, "ImageTransparency", 1)
+		-- 遮荫底留在 bg 上（不透明深灰 + 同半径圆角）：
+		-- 这样窗口四角是深灰而不是透出游戏画面，玻璃层再叠在上面。
+		change(st, bg, "BackgroundColor3", G.Base)
+		change(st, bg, "BackgroundTransparency", 1 - G.BaseOpacity)
 		change(st, main, "BackgroundTransparency", 1)
 		if st.Inner then change(st, st.Inner, "BackgroundTransparency", 1) end
 		if st.Style == 1 then
@@ -42141,7 +42145,6 @@ do
 			snow(st)
 			legacyIsland(true, w)
 		else
-			change(st, bg, "BackgroundTransparency", 1)
 			corner(st, bg, G.Radius, true)
 			corner(st, main, G.Radius, true)
 			if st.Inner then corner(st, st.Inner, G.Radius, true) end
