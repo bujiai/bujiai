@@ -41460,7 +41460,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-02J  rewrite: glass-on-squircle (keep native shape, no UICorner)
+-- Liquid Glass / 2026-11-02K  zero-white / pcall-guarded
 -- Style 1 = original purple. Style 2 = clear liquid glass.
 -- 玻璃不再用「覆盖 Frame + 多层装饰」，而是直接改控件自身的底色/圆角：
 --   · 零覆盖层 -> 不可能挡住内容
@@ -41478,7 +41478,7 @@ do
 	local G = {
 		Name = "LiquidGlass", Radius = 28, TabRadius = 16, ControlRadius = 12,
 		-- 玻璃 = 控件自身底色，不铺白块、不叠层
-		GlassColor = WHITE, GlassOpacity = 0.12,
+		GlassColor = WHITE, GlassOpacity = 0,
 		Blur = true, BlurStrength = 1, BlurDistance = 0.12, BlurSegments = 20,
 		ScaleMin = 0.50, ScaleMax = 1.60, ScaleStep = 0.05,
 		Capsule = true, CapsuleMobileOnly = false,
@@ -41612,7 +41612,7 @@ do
 			local right, down = tr - tl, bl - tl
 			local sx, sy = right.Magnitude / size.X, down.Magnitude / size.Y
 			local cf = camera.CFrame
-			local r = math.min(self.Radius * (self.PixelScale or 1), size.X / 2, size.Y / 2)
+			local r = math.min((tonumber(self.Radius) or 28) * (tonumber(self.PixelScale) or 1), size.X / 2, size.Y / 2)
 			local function place(index, x, y, width, height)
 				local pair = self.Parts[index]
 				pair.Part.CFrame = CFrame.fromMatrix(tl + right * (x / size.X) + down * (y / size.Y), cf.XVector, cf.YVector, cf.ZVector)
@@ -41825,8 +41825,8 @@ do
 			Press = 1, PressGoal = 1, PressVelocity = 0, Expanded = false, SuppressClick = false }
 		st.Capsule = cap
 		st.Surfaces[#st.Surfaces + 1] = { Gui = shell }
-		local proj = projector(st, shell, 26)
-		cap.Projector = proj
+		local okP1, proj = pcall(projector, st, shell, 26)
+		cap.Projector = okP1 and proj or nil
 		local function setScale(n)
 			if not st.Active then return end
 			st.Manual = true
@@ -41875,7 +41875,7 @@ do
 		corner(st, sheet, 22, false)
 		cap.Sheet = sheet
 		st.Surfaces[#st.Surfaces + 1] = { Gui = sheet }
-		cap.SheetProjector = projector(st, sheet, 22)
+		local okP2, sproj = pcall(projector, st, sheet, 22); cap.SheetProjector = okP2 and sproj or nil
 		button("ExpandZoom", "...", 219, 36, function()
 			cap.Expanded = not cap.Expanded
 			sheet.Visible = cap.Expanded
@@ -41934,7 +41934,7 @@ do
 					local camera = World.CurrentCamera
 					local vp = camera and camera.ViewportSize or Vector2.new(1920, 1080)
 					local half = outer.AbsoluteSize.X / 2 + 4
-					outer.Position = UDim2.fromOffset(math.clamp(origin.X + delta.X, half, math.max(half, vp.X - half)), math.clamp(origin.Y + delta.Y, 8, math.max(8, vp.Y - 168 * fitScale.Scale)))
+					outer.Position = UDim2.fromOffset(math.clamp(origin.X + delta.X, half, math.max(half, vp.X - half)), math.clamp(origin.Y + delta.Y, 8, math.max(8, vp.Y - 168 * (fitScale and fitScale.Scale or 1))))
 				end
 			end
 		end)
@@ -42033,13 +42033,15 @@ do
 			connect(st, bg:GetPropertyChangedSignal("BackgroundTransparency"), function() if st.Active and bg.BackgroundTransparency ~= 0 then bg.BackgroundTransparency = 0 end end)
 			legacyIsland(true, w)
 		else
-			-- ★ 玻璃就是 bg 自己：不建任何子层
-			glassify(st, bg, G.Radius)
-			if st.Inner then change(st, st.Inner, "BackgroundTransparency", 1) end
-			change(st, main, "BackgroundTransparency", 1)
+			-- ★ 玻璃就是 bg 自己：不建任何子层。每一步单独 pcall，任何一步失败只跳过它
+			local okGlass, gerr = pcall(glassify, st, bg, G.Radius)
+			if not okGlass then T.LastError = "glassify: " .. tostring(gerr); warn("[LiquidGlass] " .. T.LastError) end
+			pcall(function() if st.Inner then change(st, st.Inner, "BackgroundTransparency", 1) end end)
+			pcall(function() change(st, main, "BackgroundTransparency", 1) end)
 			st.Surfaces[#st.Surfaces + 1] = { Gui = bg }
-			local proj = projector(st, bg, G.Radius)
-			st.MainProjector = proj
+			local okProj, proj = pcall(projector, st, bg, G.Radius)
+			if okProj then st.MainProjector = proj
+			else T.LastError = "projector: " .. tostring(proj); warn("[LiquidGlass] " .. T.LastError) end
 			w.IsOpenButtonEnabled = false
 			if type(originalAcrylic) == "function" then originalAcrylic(aa, false) end
 			local openRoot = w.OpenButtonMain and w.OpenButtonMain.Button and w.OpenButtonMain.Button.Parent
