@@ -41460,7 +41460,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-02G  clear-transparent / no-lens-no-rim / blur-only
+-- Liquid Glass / 2026-11-02H  clear-glass / solid-button-fix
 -- CreateWindow({ Style = 1 }) keeps the original purple style.
 -- CreateWindow({ Style = 2 }) selects Liquid Glass; CX_THEME.SetStyle(1/2) switches live.
 -- WhiteWash is exactly 10% opaque. Refraction is an animated optical-edge approximation,
@@ -41674,15 +41674,18 @@ do
 			Name = "LiquidGlass", Accent = G.Accent, Background = G.Base, WindowBackground = G.Base,
 			Text = G.Text, Icon = Color3.fromRGB(226, 232, 240), Placeholder = Color3.fromRGB(170, 178, 190),
 			Primary = accent, Toggle = accent, Slider = accent, Checkbox = accent, SliderIcon = WHITE,
-			Outline = Color3.fromRGB(220, 228, 238), Dialog = WHITE,
-			Button = WHITE, PanelBackground = WHITE, PanelBackgroundTransparency = 1,
+			Outline = Color3.fromRGB(220, 228, 238), Dialog = Color3.fromRGB(32, 36, 42),
+			-- Button / DropdownBackground 在 WindUI 主题里**没有**透明度字段，
+			-- 设 WHITE 就是纯白不透明、把文字全挡住。这里只能给无彩深灰。
+			Button = Color3.fromRGB(60, 64, 70), PanelBackground = WHITE, PanelBackgroundTransparency = 1,
 			ElementBackground = WHITE, ElementBackgroundTransparency = 1,
 			LabelBackground = WHITE, LabelBackgroundTransparency = 1,
 			TabBackground = WHITE, TabBackgroundHover = WHITE, TabBackgroundHoverTransparency = 1,
 			TabBackgroundActive = WHITE, TabBackgroundActiveTransparency = 1,
 			TabBorder = WHITE, TabBorderTransparency = 1, TabBorderTransparencyActive = 1,
 			TabText = G.Text, TabTitle = G.Text, TabTextTransparency = 0.10, TabTextTransparencyActive = 0,
-			DropdownBackground = WHITE, DropdownTabBackground = WHITE,
+			DropdownBackground = Color3.fromRGB(36, 40, 46), DropdownTabBackground = Color3.fromRGB(52, 56, 62),
+			DialogBackgroundTransparency = 0.12,
 			AcrylicMain = G.Base, AcrylicNoise = 0.985,
 		}
 	end
