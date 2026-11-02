@@ -41460,7 +41460,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-02E  pure-white / nearplane-fix / blur-covers-ui
+-- Liquid Glass / 2026-11-02F  clear-transparent / no-white / blur-only
 -- CreateWindow({ Style = 1 }) keeps the original purple style.
 -- CreateWindow({ Style = 2 }) selects Liquid Glass; CX_THEME.SetStyle(1/2) switches live.
 -- WhiteWash is exactly 10% opaque. Refraction is an animated optical-edge approximation,
@@ -41474,12 +41474,12 @@ do
 	local WHITE = Color3.new(1, 1, 1)
 	local G = {
 		Name = "LiquidGlass", Radius = 28, TabRadius = 16, ControlRadius = 12,
-		-- 纯白液态玻璃：底层不铺任何颜色，只有白色 + 模糊
+		-- 无色透明玻璃：不铺任何底色，只靠模糊 + 极淡亮边 + 轮廓
 		Tint = WHITE, Saturation = 1.0,
-		Base = WHITE, BaseOpacity = 0.26, TintOpacity = 0.22,
-		WhiteOpacity = 0.10, RimOpacity = 0.30, Refraction = 0.62,
-		-- 白底必须配深色前景，否则白字看不见
-		Accent = Color3.fromRGB(62, 66, 72), Text = Color3.fromRGB(40, 42, 46),
+		Base = WHITE, BaseOpacity = 0, TintOpacity = 0,
+		WhiteOpacity = 0, RimOpacity = 0.45, Refraction = 0.62,
+		-- 透明底只能选一边：这里选白字（模糊后的背景多为中间调）
+		Accent = Color3.fromRGB(235, 240, 246), Text = Color3.fromRGB(246, 248, 250),
 		Blur = true, BlurStrength = 1, BlurDistance = 0.12, BlurSegments = 20,
 		ScaleMin = 0.50, ScaleMax = 1.60, ScaleStep = 0.05,
 		Capsule = true, CapsuleMobileOnly = false,
@@ -41643,7 +41643,10 @@ do
 	-- 纯白玻璃只要 4 层：白底 / 10% 白覆层 / 极淡白边 / 玻璃轮廓
 	local function material(st, host, radius, name, blur)
 		local root = passive(st, host, name, 0, radius, G.Base, 1 - G.BaseOpacity, 2)
-		passive(st, root, "WhiteWash", 0, radius, WHITE, 1 - G.WhiteOpacity, 3)
+		-- 白覆层只在需要时才建；WhiteOpacity=0 时完全跳过，少一层透明 Frame
+		if G.WhiteOpacity > 0 then
+			passive(st, root, "WhiteWash", 0, radius, WHITE, 1 - G.WhiteOpacity, 3)
+		end
 		local rim = stroke(st, root, "PixelBrightRim", 1, WHITE, 1 - G.RimOpacity)
 		local rimGradient = create(st, "UIGradient", {
 			Name = "MovingRimLight", Rotation = 32,
@@ -41677,17 +41680,17 @@ do
 		local accent = saturated(G.Accent)
 		return {
 			Name = "LiquidGlass", Accent = G.Accent, Background = G.Base, WindowBackground = G.Base,
-			Text = G.Text, Icon = Color3.fromRGB(92, 96, 102), Placeholder = Color3.fromRGB(142, 146, 152),
-			Primary = accent, Toggle = accent, Slider = accent, Checkbox = accent, SliderIcon = Color3.fromRGB(120, 124, 130),
-			Outline = Color3.fromRGB(200, 204, 210), Dialog = WHITE,
-			Button = Color3.fromRGB(238, 240, 243), PanelBackground = WHITE, PanelBackgroundTransparency = 0.86,
-			ElementBackground = WHITE, ElementBackgroundTransparency = 0.84,
-			LabelBackground = WHITE, LabelBackgroundTransparency = 0.88,
-			TabBackground = WHITE, TabBackgroundHover = Color3.fromRGB(246, 248, 250), TabBackgroundHoverTransparency = 0.80,
-			TabBackgroundActive = Color3.fromRGB(226, 230, 236), TabBackgroundActiveTransparency = 0.70,
+			Text = G.Text, Icon = Color3.fromRGB(226, 232, 240), Placeholder = Color3.fromRGB(170, 178, 190),
+			Primary = accent, Toggle = accent, Slider = accent, Checkbox = accent, SliderIcon = WHITE,
+			Outline = Color3.fromRGB(220, 228, 238), Dialog = WHITE,
+			Button = WHITE, PanelBackground = WHITE, PanelBackgroundTransparency = 1,
+			ElementBackground = WHITE, ElementBackgroundTransparency = 0.90,
+			LabelBackground = WHITE, LabelBackgroundTransparency = 0.94,
+			TabBackground = WHITE, TabBackgroundHover = WHITE, TabBackgroundHoverTransparency = 0.88,
+			TabBackgroundActive = WHITE, TabBackgroundActiveTransparency = 0.82,
 			TabBorder = WHITE, TabBorderTransparency = 1, TabBorderTransparencyActive = 1,
-			TabText = G.Text, TabTitle = G.Text, TabTextTransparency = 0.12, TabTextTransparencyActive = 0,
-			DropdownBackground = WHITE, DropdownTabBackground = Color3.fromRGB(238, 240, 243),
+			TabText = G.Text, TabTitle = G.Text, TabTextTransparency = 0.10, TabTextTransparencyActive = 0,
+			DropdownBackground = WHITE, DropdownTabBackground = WHITE,
 			AcrylicMain = G.Base, AcrylicNoise = 0.985,
 		}
 	end
