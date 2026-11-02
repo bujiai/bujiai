@@ -41460,7 +41460,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-02O  exact-perspective-projection
+-- Liquid Glass / 2026-11-02P  blur-offset-tunable / control-colors
 -- Style 1 = original purple. Style 2 = clear liquid glass.
 -- 玻璃不再用「覆盖 Frame + 多层装饰」，而是直接改控件自身的底色/圆角：
 --   · 零覆盖层 -> 不可能挡住内容
@@ -41480,6 +41480,8 @@ do
 		-- 玻璃 = 控件自身底色，不铺白块、不叠层
 		GlassColor = WHITE, GlassOpacity = 0,
 		Blur = true, BlurStrength = 1, BlurDistance = 0.12, BlurSegments = 20,
+		-- 模糊区域相对 UI 的像素偏移（正值 = 往右下移），用于微调对齐
+		BlurOffsetX = 0, BlurOffsetY = 6,
 		ScaleMin = 0.50, ScaleMax = 1.60, ScaleStep = 0.05,
 		Capsule = true, CapsuleMobileOnly = false,
 		Text = Color3.fromRGB(246, 248, 250),
@@ -41644,7 +41646,9 @@ do
 			local abs, pos0 = self.Gui.AbsoluteSize, self.Gui.AbsolutePosition
 			local inset = 2
 			local size = Vector2.new(abs.X - inset * 2, abs.Y - inset * 2)
-			local pos = Vector2.new(pos0.X + inset, pos0.Y + inset)
+			local pos = Vector2.new(
+				pos0.X + inset + (tonumber(G.BlurOffsetX) or 0),
+				pos0.Y + inset + (tonumber(G.BlurOffsetY) or 0))
 			if not camera or not visible or size.X < 8 or size.Y < 8 or not G.Blur then
 				if self.Visible then for _, pair in ipairs(self.Parts) do pair.Part.Transparency = 1 end end
 				self.Visible = false
@@ -41686,6 +41690,7 @@ do
 				place(1 + segments + i, size.X / 2, size.Y - y, width, r / segments + 0.01)
 			end
 			self.Visible = true
+			T.BlurRect = { X = pos.X, Y = pos.Y, W = size.X, H = size.Y }
 			return true
 		end
 		st.Projectors[#st.Projectors + 1] = p
@@ -41698,7 +41703,7 @@ do
 		return {
 			Name = "LiquidGlass", Accent = G.Text, Background = WHITE, WindowBackground = WHITE,
 			Text = G.Text, Icon = Color3.fromRGB(226, 232, 240), Placeholder = Color3.fromRGB(170, 178, 190),
-			Primary = G.Text, Toggle = G.Text, Slider = G.Text, Checkbox = G.Text,
+			Primary = Color3.fromRGB(58, 62, 68), Toggle = Color3.fromRGB(58, 62, 68), Slider = Color3.fromRGB(58, 62, 68), Checkbox = Color3.fromRGB(58, 62, 68),
 			SliderIcon = Color3.fromRGB(200, 206, 214),
 			Outline = Color3.fromRGB(220, 228, 238), Dialog = Color3.fromRGB(32, 36, 42),
 			Button = Color3.fromRGB(60, 64, 70),
