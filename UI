@@ -41470,7 +41470,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-02S  blurrect-largest-only
+-- Liquid Glass / 2026-11-02T  fullscreen-blur-mode
 -- Style 1 = original purple. Style 2 = clear liquid glass.
 -- 玻璃不再用「覆盖 Frame + 多层装饰」，而是直接改控件自身的底色/圆角：
 --   · 零覆盖层 -> 不可能挡住内容
@@ -41489,6 +41489,10 @@ do
 		Name = "LiquidGlass", Radius = 28, TabRadius = 16, ControlRadius = 12,
 		-- 玻璃 = 控件自身底色，不铺白块、不叠层
 		GlassColor = WHITE, GlassOpacity = 0,
+		-- "fullscreen" = 全屏 BlurEffect（唯一能真正均匀覆盖的方案）
+		-- "dof"        = 相机景深（对透明玻璃无效，仅给非透明物体用）
+		-- "off"        = 关闭
+		BlurMode = "fullscreen",
 		Blur = true, BlurStrength = 1, BlurDistance = 0.12, BlurSegments = 20,
 		-- 模糊区域相对 UI 的像素偏移（正值 = 往右下移），用于微调对齐
 		BlurOffsetX = 0, BlurOffsetY = 6,
@@ -41829,22 +41833,44 @@ do
 		if instance(st.Inner) then innerVisible = st.Inner.Visible ~= false end
 		st.Shown = st.Main.Visible ~= false and innerVisible and not st.Window.Closed
 	end
+	local blurFx
 	local function ensureEffect(camera)
+		local mode = tostring(G.BlurMode or "fullscreen")
+		if mode == "fullscreen" then
+			-- 全屏模糊：Roblox 唯一能"均匀覆盖整个画面"的模糊，
+			-- 没有屏幕空间区域遮罩，所以这是唯一能让玻璃背后真正糊掉的做法。
+			if not blurFx then
+				blurFx = Instance.new("BlurEffect")
+				blurFx.Name = "CX_LiquidBlur"
+			end
+			blurFx.Size = math.clamp((tonumber(G.BlurStrength) or 1) * 24, 0, 56)
+			blurFx.Parent = game:GetService("Lighting")
+			if effect then effect.Parent = nil end
+			T.BlurStatus = "fullscreen"
+			return
+		end
+		if blurFx then blurFx.Parent = nil end
+		if mode == "off" then
+			if effect then effect.Parent = nil end
+			T.BlurStatus = "off"
+			return
+		end
 		if not effect then
 			effect = Instance.new("DepthOfFieldEffect")
 			effect.Name = "CX_LiquidDepth"
 			effect.FarIntensity = 0
-			-- 焦平面盖住玻璃深度 0.12
 			effect.FocusDistance = 0.15
 			effect.InFocusRadius = 0.03
 		end
 		effect.NearIntensity = math.clamp(G.BlurStrength, 0, 1)
 		effect.Enabled = true
 		effect.Parent = camera
+		T.BlurStatus = "camera-dof"
 	end
 	local function stopRenderer()
 		if rendering then rendering:Disconnect(); rendering = nil end
 		if effect then effect:Destroy(); effect = nil end
+		if blurFx then blurFx:Destroy(); blurFx = nil end
 		T.BlurStatus = "inactive"
 	end
 	local function startRenderer()
@@ -41881,9 +41907,10 @@ do
 			end
 			for _, w in ipairs(dead) do T.Detach(w) end
 			if not anyGlass then stopRenderer()
-			elseif camera and anyBlur and G.Blur then
+			elseif camera and G.Blur and G.BlurMode ~= "off" then
 				local ok, err = pcall(ensureEffect, camera)
-				if ok then T.BlurStatus = "rounded-camera-depth" else T.LastError = tostring(err); T.BlurStatus = "unavailable" end
+				-- 不要在这里覆盖 BlurStatus，ensureEffect 内部已经按模式设好了
+				if not ok then T.LastError = tostring(err); T.BlurStatus = "unavailable" end
 			elseif effect then effect.Parent = nil; T.BlurStatus = "inactive" end
 		end)
 	end
