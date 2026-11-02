@@ -41460,7 +41460,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-02L  fix-open-white-flash
+-- Liquid Glass / 2026-11-02M  pixel-edge / capsule-ellipse-like-style1
 -- Style 1 = original purple. Style 2 = clear liquid glass.
 -- 玻璃不再用「覆盖 Frame + 多层装饰」，而是直接改控件自身的底色/圆角：
 --   · 零覆盖层 -> 不可能挡住内容
@@ -41544,10 +41544,24 @@ do
 
 	local roundShape  -- 前向声明：glassify 要用，但它的实现写在后面
 
+	-- 1px 像素边：凸显玻璃厚度。只给窗口/胶囊加，分区不加。
+	local function pixelEdge(st, gui)
+		if not instance(gui) then return nil end
+		local stk = gui:FindFirstChild("CX_PixelEdge")
+		if not stk then
+			stk = create(st, "UIStroke", {
+				Name = "CX_PixelEdge", Thickness = 1, Color = WHITE,
+				Transparency = 0.45, ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+				LineJoinMode = Enum.LineJoinMode.Round,
+			}, gui)
+		end
+		return stk
+	end
+
 	-- ★ 唯一的「玻璃」实现：直接改控件自身，不创建任何子层
 	-- 关键：**保留原生 Squircle 形状图**，只改颜色/透明度，圆角交给 SliceScale。
 	-- 之前清空 Image 再套 UICorner，UICorner 会和形状图冲突、把窗口糊成大椭圆。
-	local function glassify(st, gui, radius)
+	local function glassify(st, gui, radius, withEdge)
 		if not instance(gui) then return end
 		local rec = T.Shapes[gui]
 		if rec then
@@ -41571,11 +41585,13 @@ do
 					gui.ImageColor3 = G.GlassColor
 				end
 			end)
+			if withEdge then pixelEdge(st, gui) end
 		else
 			-- 普通 Frame（胶囊壳等）：才用 UICorner
 			change(st, gui, "BackgroundColor3", G.GlassColor)
 			change(st, gui, "BackgroundTransparency", 1 - G.GlassOpacity)
 			corner(st, gui, radius, true)
+			if withEdge then pixelEdge(st, gui) end
 		end
 		-- 保持原图/底色的守护：主题随时会把它刷回去
 		connect(st, gui:GetPropertyChangedSignal("BackgroundColor3"), function()
@@ -41800,10 +41816,7 @@ do
 						cap.PressVelocity = cap.PressVelocity + force * dt
 						cap.Press = cap.Press + cap.PressVelocity * dt
 						cap.PressScale.Scale = math.clamp(cap.Press, 0.90, 1.04)
-						local scale = currentScale(st.Window)
-						cap.Percent.Text = string.format("%d%%  ·  %s", math.floor(scale * 100 + 0.5), st.Shown and "收起" or "展开")
-						local ratio = math.clamp((scale - G.ScaleMin) / (G.ScaleMax - G.ScaleMin), 0, 1)
-						cap.Fill.Size, cap.Thumb.Position = UDim2.fromScale(ratio, 1), UDim2.fromScale(ratio, 0.5)
+						-- 胶囊现在只有 FPS/Ping 文字（与样式一一比一），没有百分比/滑条
 					end
 				end
 			end
@@ -41824,8 +41837,9 @@ do
 			Name = "WindUILiquidCapsule", ResetOnSpawn = false, IgnoreGuiInset = true,
 			ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 2147483000,
 		}, parent)
+		-- 尺寸/形状/功能与样式一的胶囊一比一：200×38，圆角 19（正椭圆）
 		local outer = create(st, "Frame", {
-			Name = "Capsule", Size = UDim2.fromOffset(260, 52), Position = UDim2.new(0.5, 0, 0, 18),
+			Name = "Capsule", Size = UDim2.fromOffset(200, 38), Position = UDim2.new(0.5, 0, 0, 4),
 			AnchorPoint = Vector2.new(0.5, 0), BackgroundTransparency = 1, BorderSizePixel = 0,
 		}, gui)
 		local shell = create(st, "Frame", {
@@ -41833,134 +41847,91 @@ do
 			AnchorPoint = Vector2.new(0.5, 0.5), BorderSizePixel = 0,
 			BackgroundColor3 = G.GlassColor, BackgroundTransparency = 1 - G.GlassOpacity,
 		}, outer)
-		corner(st, shell, 26, false)
+		corner(st, shell, 19, false)
+		pixelEdge(st, shell)
 		local press = create(st, "UIScale", { Name = "SpringScale", Scale = 1 }, shell)
 		local fitScale = create(st, "UIScale", { Name = "CapsuleViewportScale", Scale = 1 }, outer)
-		local cap = { Gui = gui, Frame = outer, Shell = shell, PressScale = press, FitScale = fitScale,
-			Press = 1, PressGoal = 1, PressVelocity = 0, Expanded = false, SuppressClick = false }
+		local cap = {
+			Gui = gui, Frame = outer, Shell = shell, PressScale = press, FitScale = fitScale,
+			Press = 1, PressGoal = 1, PressVelocity = 0,
+		}
 		st.Capsule = cap
 		st.Surfaces[#st.Surfaces + 1] = { Gui = shell }
-		local okP1, proj = pcall(projector, st, shell, 26)
-		cap.Projector = okP1 and proj or nil
-		local function setScale(n)
-			if not st.Active then return end
-			st.Manual = true
-			st.Window:SetUIScale(n)
-		end
-		local function button(name, label, x, width, callback, parent)
-			local b = create(st, "TextButton", {
-				Name = name, Size = UDim2.fromOffset(width, 40), Position = UDim2.fromOffset(x, 6),
-				BackgroundColor3 = WHITE, BackgroundTransparency = 1, BorderSizePixel = 0,
-				Text = label, TextColor3 = G.Text, TextSize = 20, Font = Enum.Font.GothamMedium,
-				AutoButtonColor = false, Active = true, ZIndex = 12,
-			}, parent or shell)
-			corner(st, b, 20, false)
-			connect(st, b.MouseEnter, function() animate(st, b, 0.18, { BackgroundTransparency = 0.86 }) end)
-			connect(st, b.MouseLeave, function() animate(st, b, 0.24, { BackgroundTransparency = 1 }) end)
-			connect(st, b.InputBegan, function(input)
-				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-					cap.PressGoal = 0.945
-					cap.ActiveTouch = input
-					animate(st, b, 0.09, { BackgroundTransparency = 0.74 })
-				end
+		local okProj, proj = pcall(projector, st, shell, 19)
+		cap.Projector = okProj and proj or nil
+
+		-- 文字条：与样式一相同（标题 · FPS · Ping）
+		local bar = create(st, "TextButton", {
+			Name = "Bar", Size = UDim2.new(1, -4, 1, -4), Position = UDim2.fromScale(0.5, 0.5),
+			AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = Color3.new(0, 0, 0),
+			BackgroundTransparency = 0.8, BorderSizePixel = 0,
+			Text = tostring(st.Window.Title or "WindUI") .. "  ·  FPS: 0  ·  Ping: --",
+			TextColor3 = Color3.new(1, 1, 1), TextSize = 12, Font = Enum.Font.GothamBold,
+			AutoButtonColor = false, Active = true, ZIndex = 6,
+		}, shell)
+		corner(st, bar, 17, false)
+		create(st, "UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }, bar)
+		cap.Bar = bar
+		cap.Title = tostring(st.Window.Title or "WindUI")
+
+		-- FPS / Ping（和样式一同一套算法）
+		local frames, elapsed = 0, 0
+		connect(st, Run.Heartbeat, function(dt)
+			if not st.Active or not bar.Parent then return end
+			frames = frames + 1
+			elapsed = elapsed + (tonumber(dt) or 0)
+			if elapsed < 1 then return end
+			local fps = math.floor(frames / elapsed + 0.5)
+			frames, elapsed = 0, 0
+			local ping = "--"
+			pcall(function()
+				local stats = game:GetService("Stats")
+				local v = stats.Network.ServerStatsItem["Data Ping"]:GetValue()
+				ping = tostring(math.floor((tonumber(v) or 0) + 0.5))
 			end)
-			connect(st, b.Activated, callback)
-			return b
-		end
-		button("ZoomOut", "-", 5, 38, function() setScale(currentScale(st.Window) - G.ScaleStep) end)
-		button("ZoomIn", "+", 179, 38, function() setScale(currentScale(st.Window) + G.ScaleStep) end)
-		local middle = button("ToggleWindow", "", 45, 130, function()
-			if not cap.SuppressClick then st.Window:Toggle() end
+			bar.Text = string.format("%s  ·  FPS: %d  ·  Ping: %s", cap.Title, fps, ping)
 		end)
-		create(st, "TextLabel", {
-			Name = "CapsuleTitle", Size = UDim2.new(1, -8, 0, 19), Position = UDim2.fromOffset(4, 1),
-			BackgroundTransparency = 1, Text = tostring(st.Window.Title or "WindUI"), TextColor3 = G.Text,
-			TextSize = 12, Font = Enum.Font.GothamMedium, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 13,
-		}, middle)
-		cap.Percent = create(st, "TextLabel", {
-			Name = "ScalePercent", Size = UDim2.new(1, -8, 0, 16), Position = UDim2.fromOffset(4, 20),
-			BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(186, 192, 200),
-			Text = "100%", TextSize = 10, Font = Enum.Font.Gotham, ZIndex = 13,
-		}, middle)
-		local sheet = create(st, "Frame", {
-			Name = "ZoomSheet", Size = UDim2.fromOffset(252, 104), Position = UDim2.new(0.5, 0, 1, 8),
-			AnchorPoint = Vector2.new(0.5, 0), Visible = false,
-			BackgroundColor3 = G.GlassColor, BackgroundTransparency = 1 - G.GlassOpacity, BorderSizePixel = 0,
-		}, outer)
-		corner(st, sheet, 22, false)
-		cap.Sheet = sheet
-		st.Surfaces[#st.Surfaces + 1] = { Gui = sheet }
-		local okP2, sproj = pcall(projector, st, sheet, 22); cap.SheetProjector = okP2 and sproj or nil
-		button("ExpandZoom", "...", 219, 36, function()
-			cap.Expanded = not cap.Expanded
-			sheet.Visible = cap.Expanded
-			if cap.Expanded then
-				sheet.Position = UDim2.new(0.5, 0, 1, 2)
-				animate(st, sheet, 0.30, { Position = UDim2.new(0.5, 0, 1, 8) })
-			end
+
+		-- 点击切换 + 拖动（与样式一一致：拖动超过 6px 就不算点击）
+		local dragging, startPos, origin, moved, touch = false, nil, nil, 0, nil
+		connect(st, bar.MouseButton1Click, function()
+			if moved < 6 then st.Window:Toggle() end
 		end)
-		create(st, "TextLabel", {
-			Size = UDim2.new(1, -24, 0, 22), Position = UDim2.fromOffset(12, 9), BackgroundTransparency = 1,
-			Text = "界面缩放", TextSize = 12, TextColor3 = G.Text, Font = Enum.Font.GothamMedium,
-			TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12,
-		}, sheet)
-		local hit = create(st, "TextButton", {
-			Name = "ZoomSlider", Size = UDim2.fromOffset(220, 28), Position = UDim2.fromOffset(16, 35),
-			BackgroundTransparency = 1, Text = "", Active = true, ZIndex = 12,
-		}, sheet)
-		local track = create(st, "Frame", { Size = UDim2.new(1, 0, 0, 5), Position = UDim2.new(0, 0, 0.5, -2), BackgroundColor3 = WHITE, BackgroundTransparency = 0.72, BorderSizePixel = 0, ZIndex = 13 }, hit)
-		corner(st, track, 3, false)
-		cap.Fill = create(st, "Frame", { Size = UDim2.fromScale(0.5, 1), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 14 }, track)
-		corner(st, cap.Fill, 3, false)
-		cap.Thumb = create(st, "Frame", { Size = UDim2.fromOffset(18, 18), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 15 }, track)
-		corner(st, cap.Thumb, 9, false)
-		cap.Track = track
-		local reset = button("ResetScale", "恢复 100%", 64, 124, function() setScale(1) end, sheet)
-		reset.Size, reset.Position, reset.TextSize = UDim2.fromOffset(124, 24), UDim2.fromOffset(64, 71), 11
-		local dragging, sliding, start, origin, touch = false, false, nil, nil, nil
-		local function fromPointer(pos)
-			local width = track.AbsoluteSize.X
-			if width > 0 then
-				local fraction = math.clamp((pos.X - track.AbsolutePosition.X) / width, 0, 1)
-				setScale(G.ScaleMin + fraction * (G.ScaleMax - G.ScaleMin))
-			end
-		end
-		connect(st, middle.InputBegan, function(input)
+		connect(st, bar.InputBegan, function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-				dragging, start, origin, touch = true, input.Position, outer.AbsolutePosition + Vector2.new(outer.AbsoluteSize.X / 2, 0), input
-				cap.SuppressClick = false
-			end
-		end)
-		connect(st, hit.InputBegan, function(input)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-				sliding, touch = true, input
-				fromPointer(input.Position)
+				dragging, moved, startPos, touch = true, 0, input.Position, input
+				origin = Vector2.new(outer.AbsolutePosition.X + outer.AbsoluteSize.X / 2, outer.AbsolutePosition.Y)
+				cap.PressGoal = 0.94
 			end
 		end)
 		connect(st, Input.InputChanged, function(input)
 			if not st.Active then return end
-			if input.UserInputType == Enum.UserInputType.Touch and input ~= touch and input ~= cap.ActiveTouch then return end
+			if input.UserInputType == Enum.UserInputType.Touch and input ~= touch then return end
 			if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
-			if sliding then fromPointer(input.Position)
-			elseif dragging then
-				local delta = input.Position - start
-				if math.abs(delta.X) + math.abs(delta.Y) > 6 then
-					cap.SuppressClick = true
-					local camera = World.CurrentCamera
-					local vp = camera and camera.ViewportSize or Vector2.new(1920, 1080)
-					local half = outer.AbsoluteSize.X / 2 + 4
-					outer.Position = UDim2.fromOffset(math.clamp(origin.X + delta.X, half, math.max(half, vp.X - half)), math.clamp(origin.Y + delta.Y, 8, math.max(8, vp.Y - 168 * (fitScale and fitScale.Scale or 1))))
-				end
-			end
+			if not dragging or not startPos or not origin then return end
+			local delta = input.Position - startPos
+			moved = math.max(moved, math.abs(delta.X) + math.abs(delta.Y))
+			if moved < 6 then return end
+			local camera = World.CurrentCamera
+			local vp = camera and camera.ViewportSize or Vector2.new(1920, 1080)
+			local half = outer.AbsoluteSize.X / 2 + 4
+			outer.Position = UDim2.fromOffset(
+				math.clamp(origin.X + delta.X, half, math.max(half, vp.X - half)),
+				math.clamp(origin.Y + delta.Y, 4, math.max(4, vp.Y - 60)))
 		end)
 		connect(st, Input.InputEnded, function(input)
-			if input.UserInputType == Enum.UserInputType.Touch and input ~= touch and input ~= cap.ActiveTouch then return end
+			if input.UserInputType == Enum.UserInputType.Touch and input ~= touch then return end
 			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-				dragging, sliding, touch = false, false, nil
-				cap.PressGoal, cap.ActiveTouch = 1, nil
+				dragging, startPos, origin, touch = false, nil, nil, nil
+				cap.PressGoal = 1
 			end
 		end)
-		function cap:SetScale(n) setScale(n); return currentScale(st.Window) end
+
+		function cap:SetScale(n)
+			st.Manual = true
+			st.Window:SetUIScale(math.clamp(tonumber(n) or 1, G.ScaleMin, G.ScaleMax))
+			return currentScale(st.Window)
+		end
 		function cap:GetScale() return currentScale(st.Window) end
 		function cap:SetVisible(on) gui.Enabled = on ~= false end
 		function cap:Destroy() if st.Active then T.SetEnabled(false) end end
@@ -42055,7 +42026,7 @@ do
 				w.Transparent = true
 				aa.TransparencyValue = 1 - G.GlassOpacity
 			end)
-			local okGlass, gerr = pcall(glassify, st, bg, G.Radius)
+			local okGlass, gerr = pcall(glassify, st, bg, G.Radius, true)
 			if not okGlass then T.LastError = "glassify: " .. tostring(gerr); warn("[LiquidGlass] " .. T.LastError) end
 			pcall(function() if st.Inner then change(st, st.Inner, "BackgroundTransparency", 1) end end)
 			pcall(function() change(st, main, "BackgroundTransparency", 1) end)
