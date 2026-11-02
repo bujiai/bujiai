@@ -41474,12 +41474,12 @@ do
 	local WHITE = Color3.new(1, 1, 1)
 	local G = {
 		Name = "LiquidGlass", Radius = 28, TabRadius = 16, ControlRadius = 12,
-		-- 中性偏冷的玻璃：不再用高饱和亮蓝，避免整块发蓝
-		Tint = Color3.fromRGB(72, 108, 160), Saturation = 1.10,
-		Base = Color3.fromRGB(26, 32, 42), BaseOpacity = 0.46, TintOpacity = 0.22,
+		-- 纯白液态玻璃：没有任何蓝色，只靠白覆层 + 深灰遮荫 + 白色亮边
+		Tint = Color3.fromRGB(205, 212, 220), Saturation = 1.0,
+		Base = Color3.fromRGB(28, 30, 34), BaseOpacity = 0.44, TintOpacity = 0.22,
 		WhiteOpacity = 0.10, RimOpacity = 0.55, Refraction = 0.62,
-		Accent = Color3.fromRGB(70, 130, 200), Text = Color3.fromRGB(240, 246, 252),
-		Blur = true, BlurStrength = 1, BlurDistance = 0.06, BlurSegments = 14,
+		Accent = Color3.fromRGB(215, 222, 230), Text = Color3.fromRGB(246, 248, 250),
+		Blur = true, BlurStrength = 1, BlurDistance = 0.06, BlurSegments = 20,
 		ScaleMin = 0.50, ScaleMax = 1.60, ScaleStep = 0.05,
 		Capsule = true, CapsuleMobileOnly = false,
 	}
@@ -41642,17 +41642,17 @@ do
 		local rim = stroke(st, root, "PixelBrightRim", 1, WHITE, 1 - G.RimOpacity)
 		local rimGradient = create(st, "UIGradient", {
 			Name = "MovingRimLight", Rotation = 32,
-			Color = colorSequence({ {0, WHITE}, {0.45, Color3.fromRGB(214, 236, 255)}, {1, WHITE} }),
+			Color = colorSequence({ {0, WHITE}, {0.45, Color3.fromRGB(228, 233, 239)}, {1, WHITE} }),
 			Transparency = numberSequence({ {0, 0.04}, {0.30, 0.55}, {0.55, 0.92}, {0.80, 0.48}, {1, 0.06} }),
 		}, rim)
 		local inset = passive(st, root, "InnerMeniscus", 2, radius, WHITE, 1, 4)
-		stroke(st, inset, "InnerLight", 1, Color3.fromRGB(226, 242, 255), 0.82)
+		stroke(st, inset, "InnerLight", 1, Color3.fromRGB(232, 236, 240), 0.82)
 		local lens
 		if type(Creator.NewRoundFrame) == "function" then
 			makingSurface = st
 			local ok, image = pcall(Creator.NewRoundFrame, radius, "Glass-1.4", {
 				Name = "LensEdge", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
-				ImageColor3 = Color3.fromRGB(214, 236, 255), ImageTransparency = math.clamp(0.80 - G.Refraction * 0.30, 0.3, 0.86),
+				ImageColor3 = Color3.fromRGB(225, 230, 236), ImageTransparency = math.clamp(0.80 - G.Refraction * 0.30, 0.3, 0.86),
 				ZIndex = 4, Active = false, Parent = root,
 			}, {})
 			makingSurface = false
@@ -41674,17 +41674,17 @@ do
 		local accent = saturated(G.Accent)
 		return {
 			Name = "LiquidGlass", Accent = G.Tint, Background = G.Base, WindowBackground = G.Base,
-			Text = G.Text, Icon = Color3.fromRGB(200, 215, 232), Placeholder = Color3.fromRGB(150, 170, 195),
+			Text = G.Text, Icon = Color3.fromRGB(200, 206, 214), Placeholder = Color3.fromRGB(140, 146, 154),
 			Primary = accent, Toggle = accent, Slider = accent, Checkbox = accent, SliderIcon = WHITE,
-			Outline = Color3.fromRGB(190, 210, 232), Dialog = Color3.fromRGB(32, 40, 52),
-			Button = Color3.fromRGB(72, 108, 160), PanelBackground = Color3.fromRGB(40, 50, 64), PanelBackgroundTransparency = 0.96,
-			ElementBackground = Color3.fromRGB(126, 152, 190), ElementBackgroundTransparency = 0.82,
-			LabelBackground = Color3.fromRGB(40, 50, 64), LabelBackgroundTransparency = 0.92,
-			TabBackground = Color3.fromRGB(44, 56, 72), TabBackgroundHover = WHITE, TabBackgroundHoverTransparency = 0.90,
-			TabBackgroundActive = Color3.fromRGB(52, 104, 168), TabBackgroundActiveTransparency = 0.74,
+			Outline = Color3.fromRGB(196, 202, 210), Dialog = Color3.fromRGB(34, 36, 40),
+			Button = Color3.fromRGB(86, 92, 100), PanelBackground = Color3.fromRGB(38, 40, 44), PanelBackgroundTransparency = 0.96,
+			ElementBackground = Color3.fromRGB(128, 134, 142), ElementBackgroundTransparency = 0.82,
+			LabelBackground = Color3.fromRGB(38, 40, 44), LabelBackgroundTransparency = 0.92,
+			TabBackground = Color3.fromRGB(44, 46, 50), TabBackgroundHover = WHITE, TabBackgroundHoverTransparency = 0.90,
+			TabBackgroundActive = Color3.fromRGB(72, 78, 88), TabBackgroundActiveTransparency = 0.72,
 			TabBorder = WHITE, TabBorderTransparency = 1, TabBorderTransparencyActive = 1,
 			TabText = G.Text, TabTitle = G.Text, TabTextTransparency = 0.12, TabTextTransparencyActive = 0,
-			DropdownBackground = Color3.fromRGB(32, 40, 52), DropdownTabBackground = Color3.fromRGB(58, 76, 98),
+			DropdownBackground = Color3.fromRGB(34, 36, 40), DropdownTabBackground = Color3.fromRGB(58, 62, 68),
 			AcrylicMain = G.Base, AcrylicNoise = 0.985,
 		}
 	end
@@ -41745,10 +41745,10 @@ do
 			if instance(host) then
 				local entry = st.TabSurfaces[host]
 				if not entry then
-					-- host 是 AutomaticSize="Y" 容器：往里塞任何 Size=(1,0,1,0) 的子层
-					-- 都会参与高度计算，把分区按钮撑成巨型。
-					-- 所以这里只改自身圆角 + 挂一条 1px 亮边，不建任何子层。
-					corner(st, host, G.TabRadius, true)
+					-- host 是 Squircle 形状图 + AutomaticSize="Y"：
+					--   ① 不能塞 Size=(1,0,1,0) 的子层，否则循环撑高变巨型
+					--   ② 不能加 UICorner，那会把形状图裁掉，视觉上变成超长条
+					-- 只改形状图半径（SliceScale）+ 挂一条 1px 亮边。
 					local rec = T.Shapes[host]
 					if rec then roundShape(st, host, rec, G.TabRadius) end
 					local rim = stroke(st, host, "CX_TabRim", 1, WHITE, 0.62)
@@ -41857,7 +41857,7 @@ do
 		}, middle)
 		local percent = create(st, "TextLabel", {
 			Name = "ScalePercent", Size = UDim2.new(1, -8, 0, 16), Position = UDim2.fromOffset(4, 20),
-			BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(178, 196, 216),
+			BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(186, 192, 200),
 			Text = "100%", TextSize = 10, Font = Enum.Font.Gotham, ZIndex = 13,
 		}, middle)
 		cap.Percent = percent
@@ -41890,7 +41890,7 @@ do
 		corner(st, fill, 3, false)
 		local thumb = create(st, "Frame", { Size = UDim2.fromOffset(18, 18), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 15 }, track)
 		corner(st, thumb, 9, false)
-		stroke(st, thumb, "ThumbEdge", 1, Color3.fromRGB(183, 224, 255), 0.15)
+		stroke(st, thumb, "ThumbEdge", 1, Color3.fromRGB(228, 232, 238), 0.15)
 		cap.Fill, cap.Thumb, cap.Track = fill, thumb, track
 		local reset = button(st, sheet, "ResetScale", "恢复 100%", 64, 124, function() setScale(1) end)
 		reset.Size, reset.Position, reset.TextSize = UDim2.fromOffset(124, 24), UDim2.fromOffset(64, 71), 11
@@ -41956,8 +41956,11 @@ do
 			effect = Instance.new("DepthOfFieldEffect")
 			effect.Name = "CX_LiquidDepth"
 			effect.FarIntensity = 0
-			effect.FocusDistance = 0.16
-			effect.InFocusRadius = 0.015
+			-- 把焦平面压到极近（0.07），对焦半径压到 0.006：
+			-- 只有相机前 0.064 以内的玻璃几何会被模糊，正常游戏物体（米级）不受影响。
+			-- 这是 Roblox 能做到的最接近「只模糊 UI 后面」的方案（没有屏幕空间局部模糊 API）。
+			effect.FocusDistance = 0.07
+			effect.InFocusRadius = 0.006
 		end
 		effect.NearIntensity = math.clamp(G.BlurStrength, 0, 1)
 		effect.Enabled = true
