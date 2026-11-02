@@ -41460,7 +41460,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-02I  rewrite: glass-on-self (no overlay layers at all)
+-- Liquid Glass / 2026-11-02J  rewrite: glass-on-squircle (keep native shape, no UICorner)
 -- Style 1 = original purple. Style 2 = clear liquid glass.
 -- 玻璃不再用「覆盖 Frame + 多层装饰」，而是直接改控件自身的底色/圆角：
 --   · 零覆盖层 -> 不可能挡住内容
@@ -41542,17 +41542,26 @@ do
 		return c
 	end
 
+	local roundShape  -- 前向声明：glassify 要用，但它的实现写在后面
+
 	-- ★ 唯一的「玻璃」实现：直接改控件自身，不创建任何子层
+	-- 关键：**保留原生 Squircle 形状图**，只改颜色/透明度，圆角交给 SliceScale。
+	-- 之前清空 Image 再套 UICorner，UICorner 会和形状图冲突、把窗口糊成大椭圆。
 	local function glassify(st, gui, radius)
 		if not instance(gui) then return end
-		if gui:IsA("ImageLabel") or gui:IsA("ImageButton") then
-			change(st, gui, "Image", "")
-			change(st, gui, "ImageTransparency", 1)
-			change(st, gui, "ScaleType", Enum.ScaleType.Stretch)
+		local rec = T.Shapes[gui]
+		if rec then
+			-- 形状图控件（窗口背景 / Tab / 控件底）：改色 + 改半径，不碰 Image
+			change(st, gui, "ImageColor3", G.GlassColor)
+			change(st, gui, "ImageTransparency", 1 - G.GlassOpacity)
+			change(st, gui, "BackgroundTransparency", 1)
+			roundShape(st, gui, rec, radius)
+		else
+			-- 普通 Frame（胶囊壳等）：才用 UICorner
+			change(st, gui, "BackgroundColor3", G.GlassColor)
+			change(st, gui, "BackgroundTransparency", 1 - G.GlassOpacity)
+			corner(st, gui, radius, true)
 		end
-		change(st, gui, "BackgroundColor3", G.GlassColor)
-		change(st, gui, "BackgroundTransparency", 1 - G.GlassOpacity)
-		corner(st, gui, radius, true)
 		-- 保持原图/底色的守护：主题随时会把它刷回去
 		connect(st, gui:GetPropertyChangedSignal("BackgroundColor3"), function()
 			if st.Active and st.Style == 2 and gui.BackgroundColor3 ~= G.GlassColor then
@@ -41664,7 +41673,7 @@ do
 		end
 	end
 
-	local function roundShape(st, image, rec, radius)
+	roundShape = function(st, image, rec, radius)
 		if not rec or not rec.Wrapper then return end
 		if st.ShapeSaved[image] == nil then st.ShapeSaved[image] = rec.Wrapper:GetRadius() end
 		rec.Wrapper:SetRadius(radius)
