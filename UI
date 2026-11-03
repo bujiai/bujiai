@@ -41470,7 +41470,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-02U  blur-follows-visibility
+-- Liquid Glass / 2026-11-02V  notification-dark-panel
 -- Style 1 = original purple. Style 2 = clear liquid glass.
 -- 玻璃不再用「覆盖 Frame + 多层装饰」，而是直接改控件自身的底色/圆角：
 --   · 零覆盖层 -> 不可能挡住内容
@@ -41719,7 +41719,11 @@ do
 		-- Button / DropdownBackground 在 WindUI 主题里没有 *Transparency 字段，
 		-- 设白色就是纯白不透明块会挡住文字，所以只能给无彩深灰。
 		return {
-			Name = "LiquidGlass", Accent = G.Text, Background = WHITE, WindowBackground = WHITE,
+			-- Background 被 Notification / DropdownBackground / Dialog 共用，
+			-- 必须是深色，否则通知是白底白字什么都看不见。
+			-- 窗口玻璃走独立的 WindowBackground，不受影响。
+			Name = "LiquidGlass", Accent = G.Text,
+			Background = Color3.fromRGB(38, 42, 48), WindowBackground = WHITE,
 			Text = G.Text, Icon = Color3.fromRGB(226, 232, 240), Placeholder = Color3.fromRGB(170, 178, 190),
 			Primary = Color3.fromRGB(58, 62, 68), Toggle = Color3.fromRGB(58, 62, 68), Slider = Color3.fromRGB(58, 62, 68), Checkbox = Color3.fromRGB(58, 62, 68),
 			SliderIcon = Color3.fromRGB(200, 206, 214),
@@ -41733,6 +41737,13 @@ do
 			TabBorder = WHITE, TabBorderTransparency = 1, TabBorderTransparencyActive = 1,
 			TabText = G.Text, TabTitle = G.Text, TabTextTransparency = 0.10, TabTextTransparencyActive = 0,
 			DropdownBackground = Color3.fromRGB(36, 40, 46), DropdownTabBackground = Color3.fromRGB(52, 56, 62),
+			-- 通知面板：默认走的是 NotificationBorder/Content/Title/Duration，
+			-- 不设就是白色底 → 白字看不见。这里给深灰玻璃底 + 白字。
+			NotificationBorder = Color3.fromRGB(38, 42, 48), NotificationBorderTransparency = 0.12,
+			NotificationContent = G.Text, NotificationContentTransparency = 0.10,
+			NotificationTitle = G.Text, NotificationTitleTransparency = 0,
+			NotificationDuration = Color3.fromRGB(158, 164, 172), NotificationDurationTransparency = 0.15,
+			NotificationBorderSize = 1,
 			DialogBackgroundTransparency = 0.12,
 			AcrylicMain = WHITE, AcrylicNoise = 0.99,
 		}
