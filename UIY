@@ -1,3 +1,4 @@
+local function __noop() end
 
 
 
@@ -401,7 +402,7 @@ return{
 ["battery-low"]="rbxassetid://139659256984314",
 ["battery-medium"]="rbxassetid://105934079398915",
 ["battery-plus"]="rbxassetid://91931341486966",
-["battery-warning"]="rbxassetid://115230083817257",battery=
+["battery-__nooping"]="rbxassetid://115230083817257",battery=
 "rbxassetid://70765800346189",beaker=
 "rbxassetid://80902539995520",
 ["bean-off"]="rbxassetid://98164436608714",bean=
@@ -891,7 +892,7 @@ return{
 ["file-x"]="rbxassetid://107333775515154",file=
 "rbxassetid://74748492079329",files=
 "rbxassetid://102806336233202",film=
-"rbxassetid://120978945609706",fingerprint=
+"rbxassetid://120978945609706",finger__noop=
 "rbxassetid://112173305232811",
 ["fire-extinguisher"]="rbxassetid://111643493006960",
 ["fish-off"]="rbxassetid://89756724887508",
@@ -947,7 +948,7 @@ return{
 ["folder-up"]="rbxassetid://72008269765857",
 ["folder-x"]="rbxassetid://91699618247635",folder=
 "rbxassetid://80846616596607",folders=
-"rbxassetid://110351216219061",footprints=
+"rbxassetid://110351216219061",foot__noops=
 "rbxassetid://139192589041315",forklift=
 "rbxassetid://72030930983101",forward=
 "rbxassetid://97545944739523",frame=
@@ -1175,7 +1176,7 @@ return{
 ["mail-plus"]="rbxassetid://104886401588341",
 ["mail-question-mark"]="rbxassetid://126540170949819",
 ["mail-search"]="rbxassetid://135616173775287",
-["mail-warning"]="rbxassetid://81495303676089",
+["mail-__nooping"]="rbxassetid://81495303676089",
 ["mail-x"]="rbxassetid://74607841705644",mail=
 "rbxassetid://103945161245599",mailbox=
 "rbxassetid://82765503320335",mails=
@@ -1216,7 +1217,7 @@ return{
 ["message-circle-plus"]="rbxassetid://106562979649273",
 ["message-circle-question-mark"]="rbxassetid://107700302759934",
 ["message-circle-reply"]="rbxassetid://137071749508334",
-["message-circle-warning"]="rbxassetid://119020096067894",
+["message-circle-__nooping"]="rbxassetid://119020096067894",
 ["message-circle-x"]="rbxassetid://126843387725536",
 ["message-circle"]="rbxassetid://127255077587058",
 ["message-square-code"]="rbxassetid://110968863152123",
@@ -1232,7 +1233,7 @@ return{
 ["message-square-reply"]="rbxassetid://130985622754637",
 ["message-square-share"]="rbxassetid://131017005324026",
 ["message-square-text"]="rbxassetid://94899503194205",
-["message-square-warning"]="rbxassetid://138432903962261",
+["message-square-__nooping"]="rbxassetid://138432903962261",
 ["message-square-x"]="rbxassetid://137285463279462",
 ["message-square"]="rbxassetid://83881670383280",
 ["messages-square"]="rbxassetid://97532166733358",
@@ -1357,7 +1358,7 @@ return{
 ["parking-meter"]="rbxassetid://84652733960568",
 ["party-popper"]="rbxassetid://111626795712193",pause=
 "rbxassetid://74873705394436",
-["paw-print"]="rbxassetid://112218825427601",
+["paw-__noop"]="rbxassetid://112218825427601",
 ["pc-case"]="rbxassetid://122978648019101",
 ["pen-line"]="rbxassetid://109108135755303",
 ["pen-off"]="rbxassetid://84807123119438",
@@ -1412,7 +1413,7 @@ return{
 ["power-off"]="rbxassetid://118768311012214",power=
 "rbxassetid://96479131758775",presentation=
 "rbxassetid://106134583757890",
-["printer-check"]="rbxassetid://130273549443689",printer=
+["__nooper-check"]="rbxassetid://130273549443689",__nooper=
 "rbxassetid://76080649734247",projector=
 "rbxassetid://103281856385283",proportions=
 "rbxassetid://130046855997237",puzzle=
@@ -1917,7 +1918,7 @@ return{
 ["cloud-sync"]="rbxassetid://79393911188593",
 ["database-search"]="rbxassetid://92017137080138",ellipse=
 "rbxassetid://71559658267482",
-["fingerprint-pattern"]="rbxassetid://80934710831288",
+["finger__noop-pattern"]="rbxassetid://80934710831288",
 ["fishing-hook"]="rbxassetid://121038780855899",
 ["fishing-rod"]="rbxassetid://71754848048049",form=
 "rbxassetid://72999643971000",
@@ -1939,7 +1940,7 @@ return{
 ["mirror-round"]="rbxassetid://121534049429097",
 ["mouse-left"]="rbxassetid://99144293708743",
 ["mouse-right"]="rbxassetid://88331710212594",
-["printer-x"]="rbxassetid://103002721801548",
+["__nooper-x"]="rbxassetid://103002721801548",
 ["radio-off"]="rbxassetid://80359258046586",road=
 "rbxassetid://120251329173530",scooter=
 "rbxassetid://100035452787934",
@@ -6605,24 +6606,24 @@ return{
 ["presentation-graph-line-duotone"]="rbxassetid://96717943957490",
 ["presentation-graph-linear"]="rbxassetid://99931389048436",
 ["presentation-graph-outline"]="rbxassetid://133301673992793",
-["printer-2-bold"]="rbxassetid://130778080492218",
-["printer-2-bold-duotone"]="rbxassetid://118246260665242",
-["printer-2-broken"]="rbxassetid://103167474604566",
-["printer-2-line-duotone"]="rbxassetid://120099920221609",
-["printer-2-linear"]="rbxassetid://72263018022568",
-["printer-2-outline"]="rbxassetid://83450979352591",
-["printer-bold"]="rbxassetid://99889574534641",
-["printer-bold-duotone"]="rbxassetid://86171089338468",
-["printer-broken"]="rbxassetid://138782890865116",
-["printer-line-duotone"]="rbxassetid://113041558554215",
-["printer-linear"]="rbxassetid://118037406295441",
-["printer-minimalistic-bold"]="rbxassetid://81275571341906",
-["printer-minimalistic-bold-duotone"]="rbxassetid://114791893199878",
-["printer-minimalistic-broken"]="rbxassetid://119115912668016",
-["printer-minimalistic-line-duotone"]="rbxassetid://134743747615820",
-["printer-minimalistic-linear"]="rbxassetid://72954555632432",
-["printer-minimalistic-outline"]="rbxassetid://103769715487286",
-["printer-outline"]="rbxassetid://89242825092833",
+["__nooper-2-bold"]="rbxassetid://130778080492218",
+["__nooper-2-bold-duotone"]="rbxassetid://118246260665242",
+["__nooper-2-broken"]="rbxassetid://103167474604566",
+["__nooper-2-line-duotone"]="rbxassetid://120099920221609",
+["__nooper-2-linear"]="rbxassetid://72263018022568",
+["__nooper-2-outline"]="rbxassetid://83450979352591",
+["__nooper-bold"]="rbxassetid://99889574534641",
+["__nooper-bold-duotone"]="rbxassetid://86171089338468",
+["__nooper-broken"]="rbxassetid://138782890865116",
+["__nooper-line-duotone"]="rbxassetid://113041558554215",
+["__nooper-linear"]="rbxassetid://118037406295441",
+["__nooper-minimalistic-bold"]="rbxassetid://81275571341906",
+["__nooper-minimalistic-bold-duotone"]="rbxassetid://114791893199878",
+["__nooper-minimalistic-broken"]="rbxassetid://119115912668016",
+["__nooper-minimalistic-line-duotone"]="rbxassetid://134743747615820",
+["__nooper-minimalistic-linear"]="rbxassetid://72954555632432",
+["__nooper-minimalistic-outline"]="rbxassetid://103769715487286",
+["__nooper-outline"]="rbxassetid://89242825092833",
 ["programming-bold"]="rbxassetid://71466343335951",
 ["programming-bold-duotone"]="rbxassetid://79274221484621",
 ["programming-broken"]="rbxassetid://91162927003183",
@@ -7453,12 +7454,12 @@ return{
 ["shield-user-line-duotone"]="rbxassetid://126263142119843",
 ["shield-user-linear"]="rbxassetid://100140984616456",
 ["shield-user-outline"]="rbxassetid://107847999995031",
-["shield-warning-bold"]="rbxassetid://130226573962640",
-["shield-warning-bold-duotone"]="rbxassetid://139796731150549",
-["shield-warning-broken"]="rbxassetid://82262289027473",
-["shield-warning-line-duotone"]="rbxassetid://93265490410096",
-["shield-warning-linear"]="rbxassetid://100851445466101",
-["shield-warning-outline"]="rbxassetid://113170163475623",
+["shield-__nooping-bold"]="rbxassetid://130226573962640",
+["shield-__nooping-bold-duotone"]="rbxassetid://139796731150549",
+["shield-__nooping-broken"]="rbxassetid://82262289027473",
+["shield-__nooping-line-duotone"]="rbxassetid://93265490410096",
+["shield-__nooping-linear"]="rbxassetid://100851445466101",
+["shield-__nooping-outline"]="rbxassetid://113170163475623",
 ["shock-absorber-bold"]="rbxassetid://89555676609379",
 ["shock-absorber-linear"]="rbxassetid://89027228618660",
 ["shop-2-bold"]="rbxassetid://92246295435163",
@@ -12908,7 +12909,7 @@ ImageRectPosition=Vector2.new(480,96),
 ImageRectSize=Vector2.new(96,96),
 Image=8,
 },
-["printer-stroke"]={
+["__nooper-stroke"]={
 ImageRectPosition=Vector2.new(576,96),
 ImageRectSize=Vector2.new(96,96),
 Image=8,
@@ -15194,7 +15195,7 @@ Image=3,
 ImageRectPosition=Vector2.new(128,640),
 ImageRectSize=Vector2.new(128,128),
 },
-fingerprint={
+finger__noop={
 Image=3,
 ImageRectPosition=Vector2.new(256,640),
 ImageRectSize=Vector2.new(128,128),
@@ -16637,12 +16638,12 @@ Image=8,
 ImageRectPosition=Vector2.new(768,0),
 ImageRectSize=Vector2.new(128,128),
 },
-warning={
+__nooping={
 Image=8,
 ImageRectPosition=Vector2.new(896,0),
 ImageRectSize=Vector2.new(128,128),
 },
-["warning-fill"]={
+["__nooping-fill"]={
 Image=8,
 ImageRectPosition=Vector2.new(0,128),
 ImageRectSize=Vector2.new(128,128),
@@ -21584,10 +21585,10 @@ return{
 "rbxassetid://109584517777091",pauseFill=
 "rbxassetid://137155771930442",pauseRectangle=
 "rbxassetid://96022136652195",pauseRectangleFill=
-"rbxassetid://102240155391279",pawprint=
-"rbxassetid://118951499274004",pawprintCircle=
-"rbxassetid://91765366221875",pawprintCircleFill=
-"rbxassetid://98512356791291",pawprintFill=
+"rbxassetid://102240155391279",paw__noop=
+"rbxassetid://118951499274004",paw__noopCircle=
+"rbxassetid://91765366221875",paw__noopCircleFill=
+"rbxassetid://98512356791291",paw__noopFill=
 "rbxassetid://101510417889397",pc=
 "rbxassetid://130989358170900",peacesign=
 "rbxassetid://107812111045943",pedalAccelerator=
@@ -22098,16 +22099,16 @@ return{
 "rbxassetid://84116935467135",powerplugPortrait=
 "rbxassetid://72694071105448",powerplugPortraitFill=
 "rbxassetid://121682070256565",powersleep=
-"rbxassetid://71811983906237",printer=
-"rbxassetid://132293748769483",printerDotmatrix=
-"rbxassetid://101581434770454",printerDotmatrixFill=
-"rbxassetid://86408709616854",printerDotmatrixFilledAndPaper=
-"rbxassetid://135451303099374",printerDotmatrixFilledAndPaperInverse=
-"rbxassetid://94728139251204",printerDotmatrixInverse=
-"rbxassetid://124133760199215",printerFill=
-"rbxassetid://86971013825188",printerFilledAndPaper=
-"rbxassetid://79654479678668",printerFilledAndPaperInverse=
-"rbxassetid://95311192438589",printerInverse=
+"rbxassetid://71811983906237",__nooper=
+"rbxassetid://132293748769483",__nooperDotmatrix=
+"rbxassetid://101581434770454",__nooperDotmatrixFill=
+"rbxassetid://86408709616854",__nooperDotmatrixFilledAndPaper=
+"rbxassetid://135451303099374",__nooperDotmatrixFilledAndPaperInverse=
+"rbxassetid://94728139251204",__nooperDotmatrixInverse=
+"rbxassetid://124133760199215",__nooperFill=
+"rbxassetid://86971013825188",__nooperFilledAndPaper=
+"rbxassetid://79654479678668",__nooperFilledAndPaperInverse=
+"rbxassetid://95311192438589",__nooperInverse=
 "rbxassetid://115141700658880",progressIndicator=
 "rbxassetid://134648930692461",projective=
 "rbxassetid://110200001616884",purchased=
@@ -22522,7 +22523,7 @@ return{
 "rbxassetid://120210585511812",shoeCircle=
 "rbxassetid://93746804130801",shoeCircleFill=
 "rbxassetid://109097554908605",shoeFill=
-"rbxassetid://101085133210082",shoeprintsFill=
+"rbxassetid://101085133210082",shoe__noopsFill=
 "rbxassetid://133410738715594",shower=
 "rbxassetid://72243625543938",showerFill=
 "rbxassetid://121541580281020",showerHandheld=
@@ -23468,8 +23469,8 @@ return{
 "rbxassetid://103949277905203",wandAndRaysInverse=
 "rbxassetid://136144136949374",wandAndSparkles=
 "rbxassetid://81387627484062",wandAndSparklesInverse=
-"rbxassetid://93661064622780",warninglight=
-"rbxassetid://113140159439763",warninglightFill=
+"rbxassetid://93661064622780",__noopinglight=
+"rbxassetid://113140159439763",__noopinglightFill=
 "rbxassetid://70511720479101",washer=
 "rbxassetid://82321578713546",washerCircle=
 "rbxassetid://112942126896950",washerCircleFill=
@@ -24067,7 +24068,7 @@ return{
 ["file-xmark"]="rbxassetid://139863878410957",
 ["file-zipper"]="rbxassetid://71253058147459",files=
 "rbxassetid://83062861217187",filmstrip=
-"rbxassetid://98311073132457",fingerprint=
+"rbxassetid://98311073132457",finger__noop=
 "rbxassetid://109038457478113",firewall=
 "rbxassetid://119509701461101",flag=
 "rbxassetid://123555524822059",flame=
@@ -24315,7 +24316,7 @@ return{
 "rbxassetid://80662775071567",
 ["plus-shape"]="rbxassetid://76944214577840",
 ["plus-shape-fill"]="rbxassetid://139105857222301",power=
-"rbxassetid://138353101694958",printer=
+"rbxassetid://138353101694958",__nooper=
 "rbxassetid://131123146569579",pulse=
 "rbxassetid://77126153989476",puzzle=
 "rbxassetid://95674201006671",
@@ -24578,10 +24579,10 @@ if not f.Icons[g].Spritesheets[l]then
 f.Icons[g].Spritesheets[l]=l
 end
 else
-warn("AddIcons: Invalid spritesheet data format for icon '"..i.."'")
+__noop("AddIcons: Invalid spritesheet data format for icon '"..i.."'")
 end
 else
-warn("AddIcons: Unsupported data type for icon '"..i.."': "..type(j))
+__noop("AddIcons: Unsupported data type for icon '"..i.."': "..type(j))
 end
 end
 end
@@ -25011,7 +25012,7 @@ if not u then
 if m and m.Window and m.Window.Debug then local
 x, z=v:find":%d+: "
 
-warn("[ NovaUI: DEBUG Mode ] "..v)
+__noop("[ NovaUI: DEBUG Mode ] "..v)
 
 return m:Notify{
 Title="DEBUG Mode: Error",
@@ -25095,7 +25096,7 @@ if _ok and _nf then
 v.FontFace=_nf
 elseif not _CX_FONT_WARN then
 _CX_FONT_WARN=true
-warn("[CX_FONT] Font.new failed r="..tostring(r).." w="..tostring(_w).." s="..tostring(_s).." err="..tostring(_nf))
+__noop("[CX_FONT] Font.new failed r="..tostring(r).." w="..tostring(_w).." s="..tostring(_s).." err="..tostring(_nf))
 end
 end
 end
@@ -25709,7 +25710,7 @@ local M,N=pcall(getcustomasset,J)
 if M then
 H.ImageLabel.Image=N
 else
-warn(
+__noop(
 string.format(
 "[ NovaUI.Creator ] Failed to load custom asset '%s': %s",
 J,
@@ -25723,7 +25724,7 @@ end
 end)
 end)
 if not L then
-warn(
+__noop(
 "[ NovaUI.Creator ]  '".."Unknown"or"Studio".."' doesnt support the URL Images. Error: "..M
 )
 
@@ -26600,7 +26601,7 @@ else
 return false,"JSON decode error"
 end
 else
-warn(
+__noop(
 " HTTP request was not successful. Code: "
 ..tostring(am.StatusCode)
 .." Message: "
@@ -26689,31 +26690,31 @@ JunkieProtected.SERVICE_ID=ab
 
 local function ValidateKey(ae)
 if not ae or ae==""then
-print"No key provided!"
+__noop"No key provided!"
 
 return false,"No key provided. Please get a key."
 end
 
 local af=JunkieProtected.IsKeylessMode()
 if af and af.keyless_mode then
-print"Keyless mode enabled. Starting script..."
+__noop"Keyless mode enabled. Starting script..."
 return true,"Keyless mode enabled. Starting script..."
 end
 
 local ag=JunkieProtected.ValidateKey{Key=ae}
 if ag=="valid"then
-print"Key is valid! Starting script..."
+__noop"Key is valid! Starting script..."
 load()
 if _G.JD_IsPremium then
-print"Premium user detected!"
+__noop"Premium user detected!"
 else
-print"Standard user"
+__noop"Standard user"
 end
 
 return true,"Key is valid!"
 else
 local ah=JunkieProtected.GetKeyLink()
-print"Invalid key!"
+__noop"Invalid key!"
 
 return false,"Invalid key. Get one from:"..ah
 end
@@ -29199,11 +29200,11 @@ end
 
 function ae.Init(af,ag)
 if not ag.Folder then
-warn"[ NovaUI.ConfigManager ] Window.Folder is not specified."
+__noop"[ NovaUI.ConfigManager ] Window.Folder is not specified."
 return false
 end
 if ab:IsStudio()or not writefile then
-warn"[ NovaUI.ConfigManager ] The config system doesn't work in the studio."
+__noop"[ NovaUI.ConfigManager ] The config system doesn't work in the studio."
 return false
 end
 
@@ -29228,7 +29229,7 @@ end
 
 function ae.SetPath(af,ag)
 if not ag then
-warn"[ NovaUI.ConfigManager ] Custom path is not specified."
+__noop"[ NovaUI.ConfigManager ] Custom path is not specified."
 return false
 end
 
@@ -29312,7 +29313,7 @@ end
 
 local ak,al=pcall(function()
 local ak=readfile or function()
-warn"[ NovaUI.ConfigManager ] The config system doesn't work in the studio."
+__noop"[ NovaUI.ConfigManager ] The config system doesn't work in the studio."
 return nil
 end
 return ac:JSONDecode(ak(ai.Path))
@@ -29399,9 +29400,9 @@ local al,am=pcall(function()
 return ai:Load()
 end)
 if al then
-if ad.Debug then print("[ NovaUI.ConfigManager ] AutoLoaded config: "..ag)end
+if ad.Debug then __noop("[ NovaUI.ConfigManager ] AutoLoaded config: "..ag)end
 else
-warn("[ NovaUI.ConfigManager ] Failed to AutoLoad config: "..ag.." - "..tostring(am))
+__noop("[ NovaUI.ConfigManager ] Failed to AutoLoad config: "..ag.." - "..tostring(am))
 end
 end)
 end
@@ -33903,7 +33904,7 @@ al.ParentType=="HStack"or al.ParentType=="Group"
 if aq and ao.CodeFrameModule then
 ao.CodeFrameModule:SetType(aq)
 
-print(aq)
+__noop(aq)
 ao.TopbarFrameModule:SetType(
 table.find({"Squircle-BL-BR","SquircleH-BL-BR"},aq)~=nil and"Square"or aq
 )
@@ -35824,7 +35825,7 @@ end)
 if ay then
 ak.PendingConfigData[at.Flag]=nil
 else
-warn(
+__noop(
 "[ NovaUI ] Failed to apply pending config for '"
 ..at.Flag
 .."': "
@@ -37579,7 +37580,7 @@ local _cxSBC=aw.UIElements.SideBarContainer
 if not(typeof(_cxSBC)=="Instance"and _cxSBC:IsA("GuiObject"))then
 if not _CX_UI_DIAG then
 _CX_UI_DIAG=true
-warn("[CX_UI] SideBarContainer BAD type="..typeof(_cxSBC).." val="..tostring(_cxSBC))
+__noop("[CX_UI] SideBarContainer BAD type="..typeof(_cxSBC).." val="..tostring(_cxSBC))
 end
 local _fb=Instance.new("Frame")
 _fb.Name="SideBarContainer"
@@ -37879,7 +37880,7 @@ Headers={["User-Agent"]="Roblox/Exploit"},
 writefile(u,v)
 end)
 if not v then
-warn("[ NovaUI.Window.Background ] Failed to download video: "..tostring(x))
+__noop("[ NovaUI.Window.Background ] Failed to download video: "..tostring(x))
 end
 end
 
@@ -37887,9 +37888,9 @@ local v,x=pcall(function()
 return getcustomasset(u)
 end)
 if not v then
-warn("[ NovaUI.Window.Background ] Failed to load custom asset: "..tostring(x))
+__noop("[ NovaUI.Window.Background ] Failed to load custom asset: "..tostring(x))
 end
-warn"[ NovaUI.Window.Background ] VideoFrame may not work with custom video"
+__noop"[ NovaUI.Window.Background ] VideoFrame may not work with custom video"
 m=x
 end
 
@@ -37924,7 +37925,7 @@ writefile(u,v)
 end)
 
 if not v then
-warn("[ Window.Background ] Failed to download image: "..tostring(x))
+__noop("[ Window.Background ] Failed to download image: "..tostring(x))
 end
 end
 
@@ -37933,7 +37934,7 @@ return getcustomasset(u)
 end)
 
 if not v then
-warn("[ Window.Background ] Failed to load custom asset: "..tostring(x))
+__noop("[ Window.Background ] Failed to load custom asset: "..tostring(x))
 end
 
 l=ao("ImageLabel",{
@@ -39868,7 +39869,7 @@ aA.Window=aa.Window
 aA.Parent=aa.ScreenGui.Window
 
 if aa.Window then
-warn"You cannot create more than one window"
+__noop"You cannot create more than one window"
 return
 end
 
@@ -40072,6 +40073,7 @@ do
 			ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 			DisplayOrder = 2147483000,
 		}, parentGui)
+		pcall(function() local pg = protectgui or (syn and syn.protect_gui); if pg then pg(gui) end end)
 
 		
 		local outer = ni("Frame", {
@@ -41951,6 +41953,7 @@ do
 			Name = "e1c5a2", ResetOnSpawn = false, IgnoreGuiInset = true,
 			ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 2147483000,
 		}, parent)
+		pcall(function() local pg = protectgui or (syn and syn.protect_gui); if pg then pg(gui) end end)
 		-- 尺寸/形状/功能与样式一的胶囊一比一：200×38，圆角 19（正椭圆）
 		local outer = create(st, "Frame", {
 			Name = "Capsule", Size = UDim2.fromOffset(200, 38), Position = UDim2.new(0.5, 0, 0, 4),
@@ -42141,13 +42144,13 @@ do
 				aa.TransparencyValue = 1 - G.GlassOpacity
 			end)
 			local okGlass, gerr = pcall(glassify, st, bg, G.Radius, true)
-			if not okGlass then T.LastError = "glassify: " .. tostring(gerr); warn("[LiquidGlass] " .. T.LastError) end
+			if not okGlass then T.LastError = "glassify: " .. tostring(gerr); __noop("[LiquidGlass] " .. T.LastError) end
 			pcall(function() if st.Inner then change(st, st.Inner, "BackgroundTransparency", 1) end end)
 			pcall(function() change(st, main, "BackgroundTransparency", 1) end)
 			st.Surfaces[#st.Surfaces + 1] = { Gui = bg }
 			local okProj, proj = pcall(projector, st, bg, G.Radius)
 			if okProj then st.MainProjector = proj
-			else T.LastError = "projector: " .. tostring(proj); warn("[LiquidGlass] " .. T.LastError) end
+			else T.LastError = "projector: " .. tostring(proj); __noop("[LiquidGlass] " .. T.LastError) end
 			w.IsOpenButtonEnabled = false
 			if type(originalAcrylic) == "function" then originalAcrylic(aa, false) end
 			local openRoot = w.OpenButtonMain and w.OpenButtonMain.Button and w.OpenButtonMain.Button.Parent
@@ -42268,7 +42271,7 @@ do
 			if T.Enabled and style == 2 then w.IsOpenButtonEnabled = not (config.OpenButton and config.OpenButton.Enabled == false) end
 			if T.UnlockFPS and type(setfpscap) == "function" then pcall(setfpscap, T.FPSTarget) end
 			local ok, err = pcall(attach, w)
-			if not ok then T.LastError = tostring(err); T.Detach(w); warn("[LiquidGlass] " .. tostring(err)) end
+			if not ok then T.LastError = tostring(err); T.Detach(w); __noop("[LiquidGlass] " .. tostring(err)) end
 		end
 		return w
 	end
