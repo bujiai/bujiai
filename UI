@@ -41459,7 +41459,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-12A  ux-suite
+-- Liquid Glass / 2026-11-13B  ux-suite
 -- Style 1 = original purple. Style 2 = clear liquid glass.
 -- 玻璃不再用「覆盖 Frame + 多层装饰」，而是直接改控件自身的底色/圆角：
 --   · 零覆盖层 -> 不可能挡住内容
@@ -41490,7 +41490,7 @@ do
 		Text = Color3.fromRGB(246, 248, 250),
 	}
 	local T = {
-		Version = "LiquidGlass-20261112A", Enabled = true, Style = 1,
+		Version = "LiquidGlass-20261113B", Enabled = true, Style = 1,
 		Purple1 = Color3.fromRGB(94, 92, 230), Purple2 = Color3.fromRGB(191, 90, 242),
 		Radius = 0, Snow = true, SnowCount = 8, SnowAlpha = 0.75,
 		UnlockFPS = true, FPSTarget = 240, Glow = false, GlowThickness = 2, GlowAlpha = 0.35,
@@ -41552,40 +41552,89 @@ do
 	-- 1px 像素边：凸显玻璃厚度。只给窗口/胶囊加，分区不加。
 	-- 关键：UIStroke 加在 ImageLabel 形状图上时**只沿矩形边界**，会画成直角框。
 	-- 形状图控件必须改用 Creator 的 "SquircleOutline" 形状图，那才是沿圆角的边。
-	local function pixelEdge(st, gui, radius)
+	local function pixelEdge(st, gui, radius, color, alpha)
 		if not instance(gui) then return nil end
+		color = color or Color3.fromRGB(150, 162, 180)
+		alpha = alpha or 0.28
 		local rec = T.Shapes[gui]
 		if rec then
 			local edge = gui:FindFirstChild("CX_PixelEdge")
 			if not instance(edge) and type(Creator.NewRoundFrame) == "function" then
+				-- 往外让 1px：形状图自带的软边 + 内嵌描边会看成「两层边」
 				local ok, img = pcall(Creator.NewRoundFrame, tonumber(radius) or 28, "SquircleOutline", {
-					Name = "CX_PixelEdge", Size = UDim2.fromScale(1, 1),
-					BackgroundTransparency = 1,
-					ImageColor3 = Color3.fromRGB(150, 162, 180), ImageTransparency = 0.28,
-					ZIndex = 4, Active = false, Parent = gui,
+					Name = "CX_PixelEdge", Size = UDim2.new(1, 2, 1, 2),
+					Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5),
+					BackgroundTransparency = 1, ImageColor3 = color, ImageTransparency = alpha,
+					ZIndex = (tonumber(gui.ZIndex) or 1) + 1, Active = false, Parent = gui,
 				}, {})
 				if ok and instance(img) then edge = own(st, img) end
 			end
 			if not instance(edge) then
 				-- 兜底：SquircleOutline 不可用时退回 UIStroke，至少还有一圈边
 				edge = create(st, "UIStroke", {
-					Name = "CX_PixelEdge", Thickness = 1, Color = Color3.fromRGB(150, 162, 180),
-					Transparency = 0.28, ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+					Name = "CX_PixelEdge", Thickness = 1, Color = color, Transparency = alpha,
+					ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 					LineJoinMode = Enum.LineJoinMode.Round,
 				}, gui)
+			end
+			if instance(edge) then
+				pcall(function() edge.Color, edge.Transparency = color, alpha end)
+				pcall(function() edge.ImageColor3, edge.ImageTransparency = color, alpha end)
 			end
 			return edge
 		end
 		-- 普通 Frame（有 UICorner）→ UIStroke 会正常沿圆角走
 		local stk = gui:FindFirstChild("CX_PixelEdge")
-		if not stk then
+		if not instance(stk) then
 			stk = create(st, "UIStroke", {
-				Name = "CX_PixelEdge", Thickness = 1, Color = Color3.fromRGB(150, 162, 180),
-				Transparency = 0.28, ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+				Name = "CX_PixelEdge", Thickness = 1, Color = color, Transparency = alpha,
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 				LineJoinMode = Enum.LineJoinMode.Round,
 			}, gui)
+		else
+			pcall(function() stk.Color, stk.Transparency = color, alpha end)
 		end
 		return stk
+	end
+
+	-- 柔光光晕：用多层同轴 SquircleOutline 叠出真正的渐变。
+	-- 单加一条 UIStroke 只会得到第二道硬边 —— 那正是「看着像两层边」的来源。
+	local function haloGlow(st, gui, radius, color, alpha, count, step)
+		if not instance(gui) then return end
+		color = color or Color3.new(1, 1, 1)
+		count = math.clamp(tonumber(count) or 7, 3, 12)
+		step = tonumber(step) or 2
+		local r = tonumber(radius) or 24
+		if type(Creator.NewRoundFrame) ~= "function" then return end
+		local baseZ = (tonumber(gui.ZIndex) or 1) - 1
+		local list = {}
+		for i = 1, count do
+			local name = "CX_Glow" .. i
+			local t = (i - 1) / math.max(count - 1, 1)
+			local a = (alpha or 0.42) * (1 - t) * (1 - t) * 0.66
+			local img = gui:FindFirstChild(name)
+			if not instance(img) then
+				local ok, made = pcall(Creator.NewRoundFrame, r + i * step * 0.3, "SquircleOutline", {
+					Name = name,
+					Size = UDim2.new(1, i * step * 2, 1, i * step * 2),
+					Position = UDim2.fromScale(0.5, 0.5),
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					BackgroundTransparency = 1,
+					ImageColor3 = color,
+					ImageTransparency = math.clamp(1 - a, 0, 1),
+					ZIndex = baseZ, Active = false, Parent = gui,
+				}, {})
+				if ok and instance(made) then img = own(st, made) end
+			end
+			if instance(img) then
+				pcall(function()
+					img.ImageColor3 = color
+					img.ImageTransparency = math.clamp(1 - a, 0, 1)
+				end)
+				list[#list + 1] = img
+			end
+		end
+		return list
 	end
 
 	-- ★ 唯一的「玻璃」实现：直接改控件自身，不创建任何子层
@@ -41946,6 +41995,21 @@ do
 		end)
 	end
 
+	-- 界面增强层的可调项（提前声明：胶囊里也要用）
+	local UX = {
+		Graphs = true, Keyboard = true, Glow = true, Sound = true,
+		Toasts = true, Cards = true, FlyIn = true,
+		GlowColor = Color3.new(1, 1, 1), GlowAlpha = 0.62, GlowRings = 8, GlowStep = 1.5,
+		KBColor = Color3.fromRGB(255, 214, 120), KBAlpha = 0.58,
+		GraphBase = Color3.fromRGB(255, 236, 172), GraphTint = Color3.fromRGB(255, 196, 64),
+		CardBase = Color3.fromRGB(255, 209, 122), SampleRate = 0.08,
+		LightStyle = "glass",
+	}
+	T.UX = UX
+
+	local PLR = game:GetService("Players").LocalPlayer
+	local SEG = 40
+
 	makeCapsule = function(st)
 		if not G.Capsule or (G.CapsuleMobileOnly and not Input.TouchEnabled) then return nil end
 		local parent = aa.ScreenGui and aa.ScreenGui.Parent
@@ -41955,7 +42019,7 @@ do
 			ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 2147483000,
 		}, parent)
 		pcall(function() local pg = protectgui or (syn and syn.protect_gui); if pg then pg(gui) end end)
-		-- 尺寸/形状/功能与样式一的胶囊一比一：200×38，圆角 19（正椭圆）
+		-- 尺寸/形状/功能与样式一的胶囊一比一：276×30，圆角 15（正椭圆）
 		local outer = create(st, "Frame", {
 			Name = "Capsule", Size = UDim2.fromOffset(276, 30), Position = UDim2.new(0.5, 0, 0, 4),
 			AnchorPoint = Vector2.new(0.5, 0), BackgroundTransparency = 1, BorderSizePixel = 0,
@@ -41966,7 +42030,9 @@ do
 			BackgroundColor3 = G.GlassColor, BackgroundTransparency = 1 - G.GlassOpacity,
 		}, outer)
 		corner(st, shell, 15, false)
-		pixelEdge(st, shell)
+		-- 只留一道 1px 亮边；光晕交给同轴柔光圈，避免出「两层边」
+		pixelEdge(st, shell, 15, Color3.fromRGB(208, 216, 230), 0.24)
+		haloGlow(st, shell, 15, Color3.new(1, 1, 1), UX.GlowAlpha, UX.GlowRings, UX.GlowStep)
 		local press = create(st, "UIScale", { Name = "SpringScale", Scale = 1 }, shell)
 		local fitScale = create(st, "UIScale", { Name = "CapsuleViewportScale", Scale = 1 }, outer)
 		local players = game:GetService("Players")
@@ -41984,21 +42050,40 @@ do
 		}
 		st.Capsule = cap
 		st.Surfaces[#st.Surfaces + 1] = { Gui = shell }
-		local okProj, proj = pcall(projector, st, shell, 19)
+		local okProj, proj = pcall(projector, st, shell, 15)
 		cap.Projector = okProj and proj or nil
 
-		-- 文字条：与样式一相同（标题 · FPS · Ping）
+		-- 文字条：左侧脚本名（主字）+ 角色名（次字），右侧 FPS / PING，分字号才不显得挤
 		local bar = create(st, "TextButton", {
-			Name = "Bar", Size = UDim2.new(1, -4, 1, -4), Position = UDim2.fromScale(0.5, 0.5),
-			AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = Color3.new(0, 0, 0),
-			BackgroundTransparency = 0.8, BorderSizePixel = 0,
-			Text = tostring(st.Window.Title or "NovaUI") .. "  ·  " .. tostring(players.LocalPlayer and players.LocalPlayer.Name or "?") .. "  ·  FPS 0  ·  --ms",
-			TextColor3 = Color3.new(1, 1, 1), TextSize = 11, Font = Enum.Font.GothamBold,
+			Name = "Bar", Size = UDim2.new(1, -8, 1, -8), Position = UDim2.fromScale(0.5, 0.5),
+			AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = Color3.fromRGB(10, 12, 18),
+			BackgroundTransparency = 0.84, BorderSizePixel = 0, Text = "",
 			AutoButtonColor = false, Active = true, ZIndex = 6,
 		}, shell)
-		corner(st, bar, 13, false)
-		create(st, "UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }, bar)
-		cap.Bar = bar
+		corner(st, bar, 11, false)
+
+		local dot = create(st, "Frame", {
+			Name = "Dot", Size = UDim2.fromOffset(5, 5), Position = UDim2.new(0, 11, 0.5, 0),
+			AnchorPoint = Vector2.new(0, 0.5), BackgroundColor3 = Color3.fromRGB(255, 216, 110),
+			BorderSizePixel = 0, ZIndex = 7,
+		}, bar)
+		corner(st, dot, 3, false)
+
+		local left = create(st, "TextLabel", {
+			Name = "Left", Size = UDim2.new(0.56, -20, 1, 0), Position = UDim2.fromOffset(21, 0),
+			BackgroundTransparency = 1, Text = tostring(st.Window.Title or "NovaUI"),
+			TextColor3 = Color3.new(1, 1, 1), TextSize = 12, Font = Enum.Font.GothamBold,
+			TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center,
+			TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 7,
+		}, bar)
+		local right = create(st, "TextLabel", {
+			Name = "Right", Size = UDim2.new(0.38, 0, 1, 0), Position = UDim2.new(1, -10, 0, 0),
+			AnchorPoint = Vector2.new(1, 0), BackgroundTransparency = 1, Text = "-- FPS  ·  --ms",
+			TextColor3 = Color3.fromRGB(255, 219, 126), TextSize = 11, Font = Enum.Font.Gotham,
+			TextXAlignment = Enum.TextXAlignment.Right, TextYAlignment = Enum.TextYAlignment.Center,
+			TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 7,
+		}, bar)
+		cap.Bar, cap.Left, cap.Right = bar, left, right
 		cap.Title = tostring(st.Window.Title or "NovaUI")
 
 		-- FPS / Ping（和样式一同一套算法）
@@ -42016,8 +42101,8 @@ do
 				local v = stats.Network.ServerStatsItem["Data Ping"]:GetValue()
 				ping = tostring(math.floor((tonumber(v) or 0) + 0.5))
 			end)
-			bar.Text = string.format("%s  ·  %s  ·  FPS %d  ·  %s",
-				cap.ScriptName, cap.CharName(), fps,
+			left.Text = string.format("%s  ·  %s", cap.ScriptName, cap.CharName())
+			right.Text = string.format("%d FPS  ·  %s", fps,
 				(ping == "--") and "--" or (tostring(ping) .. "ms"))
 		end)
 
@@ -42074,18 +42159,6 @@ do
 	X = {}
 	X.FlyDone = setmetatable({}, { __mode = "k" })
 
-	local UX = {
-		Graphs = true, Keyboard = true, Glow = true, Sound = true,
-		Toasts = true, Cards = true, FlyIn = true,
-		GlowColor = Color3.fromRGB(255, 255, 255), GlowAlpha = 0.55,
-		KBColor = Color3.fromRGB(150, 120, 255), KBAlpha = 0.60,
-		LightStyle = "glass",
-	}
-	T.UX = UX
-
-	local PLR = game:GetService("Players").LocalPlayer
-	local SEG = 22
-
 	local soundObj
 	local function ensureSound()
 		if instance(soundObj) and soundObj.Parent then return soundObj end
@@ -42110,6 +42183,52 @@ do
 		end)
 	end
 
+	-- 只有开关（Toggle / Checkbox）真正翻转时才响一声，不再在全局输入上乱放
+	local function hookSwitchSound(st)
+		local w = st.Window
+		if not w then return end
+		local function hookList(list)
+			if type(list) ~= "table" then return end
+			for _, el in pairs(list) do
+				if type(el) == "table" and not el.CX_Sound then
+					local t = el.__type
+					if (t == "Toggle" or t == "Checkbox") and type(el.Set) == "function" then
+						el.CX_Sound = true
+						local raw = el.Set
+						el.Set = function(self, v, a, b)
+							local changed = type(v) == "boolean" and v ~= el.Value
+							local ok, r = pcall(raw, self, v, a, b)
+							if not ok then __noop("switch: " .. tostring(r)) return nil end
+							if changed then pcall(T.PlayClick, v and 0.34 or 0.22) end
+							return r
+						end
+					end
+				end
+			end
+		end
+		local function scan()
+			if not st.Active then return end
+			hookList(w.AllElements)
+			-- AllElements 是按「每个父级各自的序号」存的，多页签会互相覆盖，
+			-- 所以再扫一遍每个页签自己的 Elements，才不漏开关
+			local tm = w.TabModule
+			local tabs = type(tm) == "table" and tm.Tabs
+			if type(tabs) == "table" then
+				for _, tab in pairs(tabs) do
+					if type(tab) == "table" then hookList(tab.Elements) end
+				end
+			end
+		end
+		-- 元素是懒创建的：前几次密一点补扫，之后就收手，绝不挂全局输入
+		task.spawn(function()
+			for i = 1, 26 do
+				if not st.Active then return end
+				pcall(scan)
+				task.wait(i <= 8 and 0.35 or 1.2)
+			end
+		end)
+	end
+
 	local function glowStroke(st, frame, color, alpha, thickness)
 		if not instance(frame) then return nil end
 		local s = frame:FindFirstChild("CX_Glow")
@@ -42131,30 +42250,7 @@ do
 	end
 
 	local function outlineGlow(st, gui, radius, color, alpha)
-		if not instance(gui) then return end
-		for i = 1, 2 do
-			local name = "CX_Glow" .. i
-			local img = gui:FindFirstChild(name)
-			if not instance(img) and type(Creator.NewRoundFrame) == "function" then
-				local pad = i * 3
-				local ok, made = pcall(Creator.NewRoundFrame, tonumber(radius) or 24, "SquircleOutline", {
-					Name = name,
-					Size = UDim2.new(1, pad * 2, 1, pad * 2),
-					Position = UDim2.fromScale(0.5, 0.5),
-					AnchorPoint = Vector2.new(0.5, 0.5),
-					BackgroundTransparency = 1,
-					ImageColor3 = color or Color3.new(1, 1, 1),
-					ImageTransparency = math.clamp(1 - (alpha or 0.5) + (i - 1) * 0.22, 0, 1),
-					Active = false,
-					Parent = gui,
-				}, {})
-				if ok and instance(made) then img = own(st, made) end
-			end
-			if instance(img) then
-				img.ImageColor3 = color or img.ImageColor3
-				img.ImageTransparency = math.clamp(1 - (alpha or 0.5) + (i - 1) * 0.22, 0, 1)
-			end
-		end
+		return haloGlow(st, gui, radius, color, (alpha or 0.5) * 1.15, UX.GlowRings, UX.GlowStep)
 	end
 
 	local function newGui(st)
@@ -42181,7 +42277,7 @@ do
 		local ex = st.Extras
 		local root = create(st, "Frame", {
 			Name = "CXGraph_" .. kind,
-			Size = UDim2.fromOffset(204, 98),
+			Size = UDim2.fromOffset(208, 104),
 			Position = UDim2.fromOffset(posX, posY),
 			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
@@ -42190,38 +42286,42 @@ do
 		local shell = create(st, "Frame", {
 			Name = "Shell",
 			Size = UDim2.fromScale(1, 1),
-			BackgroundColor3 = Color3.new(1, 1, 1),
-			BackgroundTransparency = 0.30,
+			BackgroundColor3 = UX.GraphBase,
+			BackgroundTransparency = 0.18,
 			BorderSizePixel = 0,
 			ZIndex = 60,
 		}, root)
 		corner(st, shell, 14, false)
-		glowStroke(st, shell, Color3.fromRGB(226, 232, 255), 0.30, 1)
-		pixelEdge(st, shell)
+		pixelEdge(st, shell, 14, Color3.fromRGB(255, 216, 128), 0.34)
+		haloGlow(st, shell, 14, Color3.fromRGB(255, 232, 150), 0.50, 6, 2)
 
 		local title = create(st, "TextLabel", {
 			Name = "Title",
-			Size = UDim2.new(0, 60, 0, 18),
+			Size = UDim2.new(0, 70, 0, 18),
 			Position = UDim2.fromOffset(12, 8),
 			BackgroundTransparency = 1,
 			Text = (kind == "fps") and "FPS" or "PING",
-			TextColor3 = Color3.fromRGB(235, 240, 250),
-			TextSize = 12,
+			TextColor3 = Color3.new(1, 1, 1),
+			TextSize = 11,
 			Font = Enum.Font.GothamBold,
 			TextXAlignment = Enum.TextXAlignment.Left,
+			TextStrokeColor3 = Color3.fromRGB(112, 78, 18),
+			TextStrokeTransparency = 0.50,
 			ZIndex = 62,
 		}, shell)
 
 		local value = create(st, "TextLabel", {
 			Name = "Value",
-			Size = UDim2.new(1, -70, 0, 20),
-			Position = UDim2.fromOffset(58, 7),
+			Size = UDim2.new(1, -80, 0, 20),
+			Position = UDim2.fromOffset(70, 7),
 			BackgroundTransparency = 1,
 			Text = "--",
 			TextColor3 = Color3.new(1, 1, 1),
 			TextSize = 15,
 			Font = Enum.Font.GothamBold,
 			TextXAlignment = Enum.TextXAlignment.Right,
+			TextStrokeColor3 = Color3.fromRGB(112, 78, 18),
+			TextStrokeTransparency = 0.42,
 			ZIndex = 62,
 		}, shell)
 
@@ -42231,8 +42331,8 @@ do
 			Position = UDim2.new(1, -20, 0, 6),
 			BackgroundTransparency = 1,
 			Text = "×",
-			TextColor3 = Color3.fromRGB(230, 235, 245),
-			TextTransparency = 0.25,
+			TextColor3 = Color3.new(1, 1, 1),
+			TextTransparency = 0.20,
 			TextSize = 14,
 			Font = Enum.Font.GothamBold,
 			AutoButtonColor = false,
@@ -42241,7 +42341,7 @@ do
 
 		local plot = create(st, "Frame", {
 			Name = "Plot",
-			Size = UDim2.new(1, -20, 0, 52),
+			Size = UDim2.new(1, -20, 0, 58),
 			Position = UDim2.fromOffset(10, 34),
 			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
@@ -42249,8 +42349,21 @@ do
 			ZIndex = 61,
 		}, shell)
 
+		-- 三道淡网格，密集折线才有参照，看起来才像仪器
+		for i = 1, 3 do
+			create(st, "Frame", {
+				Name = "Grid" .. i,
+				Size = UDim2.new(1, 0, 0, 1),
+				Position = UDim2.fromScale(0, (i - 0.5) / 3),
+				BackgroundColor3 = Color3.new(1, 1, 1),
+				BackgroundTransparency = 0.80,
+				BorderSizePixel = 0,
+				ZIndex = 60,
+			}, plot)
+		end
+
 		local segs = {}
-		local col = (kind == "fps") and Color3.fromRGB(196, 255, 220) or Color3.fromRGB(198, 220, 255)
+		local col = UX.GraphTint
 		for i = 1, SEG do
 			segs[i] = create(st, "Frame", {
 				Name = "S" .. i,
@@ -42258,7 +42371,7 @@ do
 				Size = UDim2.new(0, 2, 0, 2),
 				Position = UDim2.fromScale(0, 0.5),
 				BackgroundColor3 = col,
-				BackgroundTransparency = 0.10,
+				BackgroundTransparency = 0.04,
 				BorderSizePixel = 0,
 				ZIndex = 61,
 			}, plot)
@@ -42352,44 +42465,60 @@ do
 		local ex = st.Extras
 		local root = create(st, "Frame", {
 			Name = "CXKeyboard",
-			Size = UDim2.fromOffset(160, 158),
-			Position = UDim2.new(0, 18, 0.5, -79),
+			Size = UDim2.fromOffset(160, 160),
+			Position = UDim2.new(0, 18, 0.5, -80),
 			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
 			ZIndex = 55,
 		}, ex.Gui)
 		ex.KB = { Root = root, Keys = {} }
+		-- 整块键盘下面垫一层淡琥珀光斑，按键才有「浮在光上」的感觉
+		local plate = create(st, "Frame", {
+			Name = "GlowPlate",
+			Size = UDim2.new(1, 16, 1, 8),
+			Position = UDim2.fromScale(0.5, 0.5),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundColor3 = Color3.fromRGB(255, 214, 120),
+			BackgroundTransparency = 0.93,
+			BorderSizePixel = 0,
+			ZIndex = 54,
+		}, root)
+		corner(st, plate, 16, false)
+		haloGlow(st, plate, 16, Color3.fromRGB(255, 206, 96), 0.30, 6, 2)
 		for _, def in ipairs(KEYSET) do
 			local key = create(st, "Frame", {
 				Name = "K_" .. def.label,
 				Size = UDim2.fromOffset(def.w, 44),
 				Position = UDim2.fromOffset(def.x, def.y),
-				BackgroundColor3 = Color3.new(1, 1, 1),
-				BackgroundTransparency = 0.55,
+				BackgroundColor3 = Color3.fromRGB(255, 250, 236),
+				BackgroundTransparency = 0.66,
 				BorderSizePixel = 0,
 				ZIndex = 55,
 			}, root)
-			corner(st, key, 10, false)
-			local s = glowStroke(st, key, UX.KBColor, UX.KBAlpha, 1)
+			corner(st, key, 11, false)
+			pixelEdge(st, key, 11, Color3.fromRGB(255, 226, 150), 0.42)
+			local rings = haloGlow(st, key, 11, UX.KBColor, UX.KBAlpha, 4, 2)
 			local txt = create(st, "TextLabel", {
 				Size = UDim2.fromScale(1, 1),
 				BackgroundTransparency = 1,
 				Text = def.label,
-				TextColor3 = Color3.fromRGB(240, 244, 255),
+				TextColor3 = Color3.new(1, 1, 1),
 				TextSize = (def.label == "SPACE") and 11 or 15,
 				Font = Enum.Font.GothamBold,
+				TextStrokeColor3 = Color3.fromRGB(112, 78, 18),
+				TextStrokeTransparency = 0.45,
 				ZIndex = 56,
 			}, key)
 			local scale = create(st, "UIScale", { Scale = 1 }, key)
-			ex.KB.Keys[def.key] = { Frame = key, Label = txt, Scale = scale, Down = false, Stroke = s }
+			ex.KB.Keys[def.key] = {
+				Frame = key, Label = txt, Scale = scale, Down = false,
+				Cur = 1, Vel = 0, Rings = rings or {},
+			}
 		end
-		connect(st, Input.InputBegan, function(input, processed)
+		connect(st, Input.InputBegan, function(input)
 			if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
 			local k = ex.KB and ex.KB.Keys[input.KeyCode]
-			if k and not k.Down then
-				k.Down = true
-				T.PlayClick(0.18)
-			end
+			if k then k.Down = true end
 		end)
 		connect(st, Input.InputEnded, function(input)
 			if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
@@ -42403,20 +42532,26 @@ do
 	-- ---------------------------------------------------------------------
 	local function buildCards(st)
 		local ex = st.Extras
+		-- 窄屏（手机竖屏）时把列表压到胶囊下面，别和胶囊叠在一起
+		local vp = World.CurrentCamera and World.CurrentCamera.ViewportSize
+		local yTop = (vp and vp.X < 520) and 46 or 8
 		local holder = create(st, "Frame", {
 			Name = "CXFeatureList",
-			Size = UDim2.fromOffset(220, 400),
-			Position = UDim2.new(1, -232, 0.5, -200),
+			Size = UDim2.fromOffset(240, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -12, 0, yTop),
 			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
 			ZIndex = 50,
 		}, ex.Gui)
-		local list = create(st, "UIListLayout", {
-			Padding = UDim.new(0, 6),
+		create(st, "UIListLayout", {
+			Padding = UDim.new(0, 5),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			HorizontalAlignment = Enum.HorizontalAlignment.Right,
+			VerticalAlignment = Enum.VerticalAlignment.Top,
 		}, holder)
-		ex.Cards = { Holder = holder, List = list, Items = {}, Order = 0 }
+		ex.Cards = { Holder = holder, Items = {}, Order = 0 }
 	end
 
 	local function addCard(st, name, on)
@@ -42429,41 +42564,71 @@ do
 			c.Order = c.Order + 1
 			local card = create(st, "Frame", {
 				Name = "Card",
-				Size = UDim2.fromOffset(120, 30),
-				BackgroundColor3 = Color3.fromRGB(255, 240, 196),
-				BackgroundTransparency = 0.22,
+				Size = UDim2.fromOffset(0, 26),
+				AutomaticSize = Enum.AutomaticSize.X,
+				BackgroundColor3 = UX.CardBase,
+				BackgroundTransparency = 0.28,
 				BorderSizePixel = 0,
 				LayoutOrder = c.Order,
 				ZIndex = 50,
 			}, c.Holder)
 			corner(st, card, 9, false)
-			glowStroke(st, card, Color3.fromRGB(255, 236, 180), 0.35, 1)
-			local txt = create(st, "TextLabel", {
-				Name = "Text",
-				Size = UDim2.new(1, -16, 1, 0),
+			pixelEdge(st, card, 9, Color3.fromRGB(255, 228, 152), 0.30)
+			-- 内边距只给文字那一行，脉冲条不能被 UIPadding 挤进去
+			local row = create(st, "Frame", {
+				Name = "Row",
+				Size = UDim2.fromOffset(0, 26),
+				AutomaticSize = Enum.AutomaticSize.X,
 				BackgroundTransparency = 1,
-				Text = name,
-				TextColor3 = Color3.fromRGB(92, 74, 30),
-				TextSize = 12,
-				Font = Enum.Font.GothamBold,
-				TextXAlignment = Enum.TextXAlignment.Left,
 				ZIndex = 51,
 			}, card)
-			create(st, "UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }, txt)
-			local bar = create(st, "Frame", {
-				Name = "Pulse",
+			create(st, "UIPadding", {
+				PaddingLeft = UDim.new(0, 10),
+				PaddingRight = UDim.new(0, 20),
+				PaddingTop = UDim.new(0, 0),
+				PaddingBottom = UDim.new(0, 0),
+			}, row)
+			local txt = create(st, "TextLabel", {
+				Name = "Text",
+				Size = UDim2.fromOffset(0, 26),
+				AutomaticSize = Enum.AutomaticSize.X,
+				BackgroundTransparency = 1,
+				Text = name,
+				TextColor3 = Color3.new(1, 1, 1),
+				TextSize = 13,
+				Font = Enum.Font.GothamBold,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextYAlignment = Enum.TextYAlignment.Center,
+				TextStrokeColor3 = Color3.fromRGB(112, 78, 18),
+				TextStrokeTransparency = 0.55,
+				ZIndex = 51,
+			}, row)
+			-- 脉冲条：一根常亮轨道 + 一颗上下扫的亮斑，这才看得出「脉冲」
+			local track = create(st, "Frame", {
+				Name = "PulseTrack",
 				Size = UDim2.new(0, 2, 1, -10),
-				Position = UDim2.new(1, -6, 0.5, 0),
-				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.new(1, -8, 0.5, 0),
+				AnchorPoint = Vector2.new(1, 0.5),
 				BackgroundColor3 = Color3.new(1, 1, 1),
-				BackgroundTransparency = 0.25,
+				BackgroundTransparency = 0.62,
 				BorderSizePixel = 0,
 				ZIndex = 52,
 			}, card)
-			corner(st, bar, 1, false)
-			glowStroke(st, bar, Color3.new(1, 1, 1), 0.6, 2)
-			c.Items[name] = { Card = card, Bar = bar, Phase = math.random() * 6.28 }
-			card.Size = UDim2.fromOffset(math.clamp(#name * 13 + 30, 90, 200), 30)
+			corner(st, track, 1, false)
+			local beam = create(st, "Frame", {
+				Name = "PulseBeam",
+				Size = UDim2.new(0, 2, 0, 9),
+				Position = UDim2.new(0, 0, 0, 4),
+				AnchorPoint = Vector2.new(0, 0.5),
+				BackgroundColor3 = Color3.new(1, 1, 1),
+				BackgroundTransparency = 0.05,
+				BorderSizePixel = 0,
+				ZIndex = 53,
+			}, track)
+			corner(st, beam, 1, false)
+			glowStroke(st, beam, Color3.new(1, 1, 1), 0.70, 3)
+			c.Items[name] = { Card = card, Track = track, Beam = beam, Phase = math.random() * 6.28 }
+
 		else
 			if not item then return end
 			c.Items[name] = nil
@@ -42483,7 +42648,6 @@ do
 				if on ~= false and UX.Toasts then pcall(X.PushToast, st, name) end
 			end
 		end
-		if on ~= false then T.PlayClick(0.3) end
 	end
 
 	-- ---------------------------------------------------------------------
@@ -42595,66 +42759,101 @@ do
 	end
 
 	-- ---------------------------------------------------------------------
-	-- 碎片飞入
+	-- 碎片飞入：整块玻璃先被一层薄雾盖住，碎片从四周飞进来拼好，再化开露出 UI
 	-- ---------------------------------------------------------------------
+	local function fadeAll(obj, secs)
+		if not instance(obj) then return end
+		local ti = TweenInfo.new(secs, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		pcall(function() Tween:Create(obj, ti, { BackgroundTransparency = 1 }):Play() end)
+		for _, d in ipairs(obj:GetDescendants()) do
+			pcall(function() Tween:Create(d, ti, { Transparency = 1 }):Play() end)
+			pcall(function() Tween:Create(d, ti, { ImageTransparency = 1 }):Play() end)
+		end
+	end
+
 	function X.FlyIn(st)
-		if not UX.FlyIn or not st or not st.Extras then return end
+		if not UX.FlyIn or not st or not st.Extras or st.Flying then return end
+		local bg = st.Background
+		if not instance(bg) then return end
+		st.Flying = true
 		task.spawn(function()
-			local bg = st.Background
-			local t0 = os.clock()
-			while os.clock() - t0 < 1.6 do
-				if instance(bg) and bg.AbsoluteSize.Y > 60 then break end
-				task.wait(0.05)
+			-- 原版开场会把窗口从 100px 竖向拉高：等它定下来再铺碎片，不然只盖住顶端一条
+			local function sized()
+				local s = bg.AbsoluteSize
+				return s.X > 80 and s.Y > 80
 			end
-			if not instance(bg) or not st.Active then return end
+			if not sized() then
+				for _ = 1, 50 do
+					if not st.Active or not instance(bg) then st.Flying = false return end
+					if sized() then break end
+					task.wait(0.03)
+				end
+			end
+			if not st.Active or not instance(bg) or not sized() then st.Flying = false return end
+			local gui = st.Extras and st.Extras.Gui
+			if not instance(gui) then st.Flying = false return end
 			local pos, size = bg.AbsolutePosition, bg.AbsoluteSize
-			if size.X < 40 or size.Y < 40 then return end
-			local cols, rows = 4, 4
+
+			-- 薄雾：先挡住 UI，碎片才有「拼起来」的落点
+			local cover = create(st, "Frame", {
+				Name = "CXFlyCover",
+				Size = UDim2.fromOffset(size.X, size.Y),
+				Position = UDim2.fromOffset(pos.X, pos.Y),
+				BackgroundColor3 = G.GlassColor,
+				BackgroundTransparency = 0.80,
+				BorderSizePixel = 0,
+				ZIndex = 78,
+			}, gui)
+			corner(st, cover, G.Radius, false)
+			pixelEdge(st, cover, G.Radius, Color3.fromRGB(210, 218, 232), 0.32)
+
+			local cols, rows = 5, 4
 			local cw, ch = size.X / cols, size.Y / rows
-			local shards = {}
-			local gui = st.Extras.Gui
-			for i = 1, cols * rows do
-				local cx = (i - 1) % cols
-				local cy = math.floor((i - 1) / cols)
-				local target = UDim2.fromOffset(pos.X + cx * cw + cw / 2, pos.Y + cy * ch + ch / 2)
-				local from = UDim2.fromOffset(
-					pos.X + cx * cw + cw / 2 + math.random(-600, 600),
-					pos.Y + cy * ch + ch / 2 + math.random(-500, -150))
-				local s = create(st, "Frame", {
-					Name = "Shard",
-					Size = UDim2.fromOffset(cw * 0.9, ch * 0.9),
-					Position = from,
-					AnchorPoint = Vector2.new(0.5, 0.5),
-					BackgroundColor3 = Color3.new(1, 1, 1),
-					BackgroundTransparency = 0.35,
-					BorderSizePixel = 0,
-					Rotation = math.random(-60, 60),
-					ZIndex = 80,
-				}, gui)
-				corner(st, s, 10, false)
-				glowStroke(st, s, Color3.fromRGB(200, 190, 255), 0.5, 1)
-				shards[#shards + 1] = { Frame = s, Target = target }
+			local shards, n = {}, 0
+			for cy = 0, rows - 1 do
+				for cx = 0, cols - 1 do
+					n = n + 1
+					local tx, ty = pos.X + cx * cw, pos.Y + cy * ch
+					local dir = (cx < cols / 2) and -1 or 1
+					local sh = create(st, "Frame", {
+						Name = "Shard",
+						Size = UDim2.fromOffset(cw + 1, ch + 1),
+						Position = UDim2.fromOffset(tx + dir * math.random(340, 780), ty + math.random(-460, 300)),
+						BackgroundColor3 = G.GlassColor,
+						BackgroundTransparency = 0.58,
+						BorderSizePixel = 0,
+						Rotation = math.random(-50, 50),
+						ZIndex = 80,
+					}, gui)
+					corner(st, sh, 10, false)
+					pixelEdge(st, sh, 10, Color3.fromRGB(216, 224, 238), 0.24)
+					shards[#shards + 1] = { Frame = sh, To = UDim2.fromOffset(tx, ty), Delay = n * 0.01 }
+				end
 			end
-			for idx, item in ipairs(shards) do
+			for _, item in ipairs(shards) do
 				pcall(function()
-					Tween:Create(item.Frame, TweenInfo.new(0.36 + idx * 0.006, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-						Position = item.Target,
-						Rotation = 0,
-						BackgroundTransparency = 0.15,
-					}):Play()
+					Tween:Create(item.Frame,
+						TweenInfo.new(0.38, Enum.EasingStyle.Quint, Enum.EasingDirection.Out, item.Delay),
+						{ Position = item.To, Rotation = 0, BackgroundTransparency = 0.40 }):Play()
 				end)
 			end
-			task.delay(0.55, function()
-				for _, item in ipairs(shards) do
-					pcall(function()
-						Tween:Create(item.Frame, TweenInfo.new(0.22), {
-							BackgroundTransparency = 1,
-							Size = UDim2.fromOffset(2, 2),
-						}):Play()
-					end)
-				end
-				task.delay(0.26, function()
+			-- 最后一片落地 +0.06s 后整体化开
+			task.delay(0.38 + #shards * 0.01 + 0.06, function()
+				if not st.Window or st.Window.Closed then
 					for _, item in ipairs(shards) do pcall(function() item.Frame:Destroy() end) end
+					pcall(function() cover:Destroy() end)
+					st.Flying = false
+					return
+				end
+				if not instance(cover) then st.Flying = false return end
+				fadeAll(cover, 0.26)
+				for _, item in ipairs(shards) do
+					if instance(item.Frame) then fadeAll(item.Frame, 0.26) end
+				end
+				task.delay(0.32, function()
+					for _, item in ipairs(shards) do pcall(function() item.Frame:Destroy() end) end
+					pcall(function() cover:Destroy() end)
+					st.Flying = false
 				end)
 			end)
 		end)
@@ -42687,8 +42886,10 @@ do
 				outlineGlow(st, st.Background, G.Radius, UX.GlowColor, UX.GlowAlpha)
 			end)
 			pcall(function()
-				if st.Capsule and st.Capsule.Shell then
-					glowStroke(st, st.Capsule.Shell, UX.GlowColor, UX.GlowAlpha, 2)
+				-- 胶囊在 makeCapsule 里已经带了一圈柔光，这里别重复叠
+				if st.Capsule and st.Capsule.Shell
+					and not st.Capsule.Shell:FindFirstChild("CX_Glow1") then
+					haloGlow(st, st.Capsule.Shell, 15, UX.GlowColor, UX.GlowAlpha, UX.GlowRings, UX.GlowStep)
 				end
 			end)
 		end
@@ -42696,47 +42897,45 @@ do
 		connect(st, Input.InputBegan, function(input, processed)
 			if input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == Enum.KeyCode.J then
 				pcall(X.ToggleCards, st)
-			elseif processed and (input.UserInputType == Enum.UserInputType.MouseButton1
-				or input.UserInputType == Enum.UserInputType.Touch) then
-				T.PlayClick(0.28)
 			end
 		end)
+		pcall(hookSwitchSound, st)
+
+		-- 首次开场：CreateWindow 里 Open 的协程已经在 0.06s 后自己跑了，
+		-- 包 w.Open 拦不到这一次，所以这里按「Main 还没长高」判断是不是开场，
+		-- 先钉住高度再把碎片放出去。之后的每次 Open 由 wrapper 负责。
+		if UX.FlyIn then
+			local my = st.Main.Size.Y
+			if my.Scale < 0.5 and my.Offset < 100 then
+				st.OpenLock = true
+				pcall(function() st.Main.Size = st.Window.Size end)
+				task.delay(1.0, function() st.OpenLock = false end)
+				pcall(X.FlyIn, st)
+			end
+		end
 
 		if UX.LightStyle == "soft" then
 			pcall(function()
 				local edge = st.Background:FindFirstChild("CX_PixelEdge")
-				if instance(edge) then edge.ImageTransparency = 0.62 end
-				outlineGlow(st, st.Background, G.Radius, Color3.fromRGB(255, 246, 232), 0.28)
+				if instance(edge) then pcall(function() edge.ImageTransparency = 0.55 end) end
+				outlineGlow(st, st.Background, G.Radius, Color3.fromRGB(255, 246, 232), 0.30)
 			end)
 			pcall(function()
 				if st.Capsule and st.Capsule.Shell then
-					local s2 = st.Capsule.Shell:FindFirstChild("CX_Glow")
-					if instance(s2) then
-						s2.Thickness = 3
-						s2.Color = Color3.fromRGB(255, 246, 232)
-						s2.Transparency = 0.45
-					end
+					haloGlow(st, st.Capsule.Shell, 15, Color3.fromRGB(255, 246, 232), 0.42, UX.GlowRings, UX.GlowStep)
 				end
 				if ex.Graphs then
 					for _, g in pairs(ex.Graphs) do
 						local sh = g.Root:FindFirstChild("Shell")
 						if instance(sh) then
-							sh.BackgroundTransparency = 0.24
-							local gs = sh:FindFirstChild("CX_Glow")
-							if instance(gs) then
-								gs.Transparency = 0.62
-								gs.Thickness = 3
-							end
+							sh.BackgroundTransparency = 0.22
+							haloGlow(st, sh, 14, Color3.fromRGB(255, 238, 176), 0.40, 6, 2)
 						end
 					end
 				end
 			end)
 		end
 
-		if UX.FlyIn and not X.FlyDone[st.Window] then
-			X.FlyDone[st.Window] = true
-			pcall(X.FlyIn, st)
-		end
 	end
 
 	function X.ToggleCards(st)
@@ -42777,7 +42976,7 @@ do
 				for kind, g in pairs(ex.Graphs) do
 					if g.Root.Visible and g.Root.Parent then
 						g.Acc = g.Acc + dt
-						if g.Acc >= 0.15 then
+						if g.Acc >= (UX.SampleRate or 0.08) then
 							g.Acc = 0
 							local v = (kind == "fps") and lastFps or lastPing
 							pushSample(g, v)
@@ -42793,23 +42992,35 @@ do
 				end
 
 				if ex.KB then
+					local sdt = math.min(dt, 0.05)
 					for _, k in pairs(ex.KB.Keys) do
-						local goal = k.Down and 0.92 or 1
-						local cur = k.Scale.Scale
-						k.Scale.Scale = cur + (goal - cur) * math.clamp(dt * 18, 0, 1)
-						k.Frame.BackgroundTransparency = k.Down and 0.32 or 0.55
-						if k.Stroke then
-							k.Stroke.Transparency = k.Down and 0.15 or (1 - UX.KBAlpha)
+						local goal = k.Down and 0.90 or 1
+						-- 弹簧 + 阻尼：按下快收、松手回弹过头一点点，才不像死板缩放
+						k.Vel = k.Vel + (goal - k.Cur) * 900 * sdt
+						k.Vel = k.Vel * math.max(0, 1 - 24 * sdt)
+						k.Cur = math.clamp(k.Cur + k.Vel * sdt, 0.82, 1.08)
+						k.Scale.Scale = k.Cur
+						local press = math.clamp((1 - k.Cur) / 0.10, 0, 1)
+						k.Frame.BackgroundTransparency = 0.66 - press * 0.22
+						local rings = k.Rings
+						for i = 1, #rings do
+							local base = 0.60 + (i - 1) * 0.075
+							rings[i].ImageTransparency = math.clamp(base - press * 0.36, 0, 1)
 						end
 					end
 				end
 
 				if ex.Cards then
 					for _, item in pairs(ex.Cards.Items) do
-						item.Phase = item.Phase + dt * 3.2
+						item.Phase = item.Phase + dt * 3.0
 						local p = (math.sin(item.Phase) + 1) * 0.5
-						item.Bar.BackgroundTransparency = 0.65 - p * 0.45
-						item.Bar.Size = UDim2.new(0, 2, 1, -10 - p * 3)
+						if item.Beam then
+							item.Beam.Position = UDim2.new(0, 0, 0, 4.5 + p * 7)
+							item.Beam.BackgroundTransparency = 0.02 + p * 0.30
+						end
+						if item.Track then
+							item.Track.BackgroundTransparency = 0.72 - p * 0.16
+						end
 					end
 				end
 			end
@@ -42853,6 +43064,9 @@ do
 			if rec then pcall(function() rec.Wrapper:SetRadius(radius) end) end
 		end
 		restore(st)
+		if st.RawOpen then st.Window.Open = st.RawOpen end
+		st.OpenLock = false
+		st.Flying = false
 		st.Window.SetUIScale = st.RawSetScale
 		st.Window.Destroy = st.RawDestroy
 		st.Window.IsOpenButtonEnabled = st.OpenEnabled
@@ -42950,6 +43164,25 @@ do
 				if not st.AutoApplying then st.Manual = true end
 				return st.RawSetScale(self, n, ...)
 			end
+			-- 原版开场是 0.8s 把窗口从 100px 竖向拉高，会和碎片飞入互相打架。
+			-- 玻璃模式下开场瞬间给满高度，入场交给碎片，其它属性一概不动。
+			st.RawOpen = w.Open
+			w.Open = function(self, ...)
+				local r = st.RawOpen(self, ...)
+				if st.Active and st.Style == 2 then
+					st.OpenLock = true
+					pcall(function() st.Main.Size = self.Size end)
+					task.delay(1.0, function() st.OpenLock = false end)
+					pcall(X.FlyIn, st)
+				end
+				return r
+			end
+			connect(st, st.Main:GetPropertyChangedSignal("Size"), function()
+				if not st.OpenLock or not st.Active or w.Closed then return end
+				local want = w.Size
+				if typeof(want) ~= "UDim2" then st.OpenLock = false return end
+				if st.Main.Size ~= want then pcall(function() st.Main.Size = want end) end
+			end)
 			for image, rec in pairs(T.Shapes) do
 				if image.Parent and rec.Shape == "Squircle" and rec.Radius < 80 then
 					roundShape(st, image, rec, image == bg and G.Radius or math.max(rec.Radius, G.ControlRadius))
