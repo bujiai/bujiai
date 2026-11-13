@@ -41459,7 +41459,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-13B  ux-suite
+-- Liquid Glass / 2026-11-13C  ux-suite
 -- Style 1 = original purple. Style 2 = clear liquid glass.
 -- 玻璃不再用「覆盖 Frame + 多层装饰」，而是直接改控件自身的底色/圆角：
 --   · 零覆盖层 -> 不可能挡住内容
@@ -41482,7 +41482,7 @@ do
 		-- "dof"        = 相机景深（对透明玻璃无效，仅给非透明物体用）
 		-- "off"        = 关闭
 		BlurMode = "fullscreen",
-		Blur = true, BlurStrength = 0.6, BlurDistance = 0.12, BlurSegments = 12,
+		Blur = true, BlurStrength = 0.6, BlurDistance = 0.12, BlurSegments = 8,
 		-- 模糊区域相对 UI 的像素偏移（正值 = 往右下移），用于微调对齐
 		BlurOffsetX = 0, BlurOffsetY = 6,
 		ScaleMin = 0.50, ScaleMax = 1.60, ScaleStep = 0.05,
@@ -41490,7 +41490,7 @@ do
 		Text = Color3.fromRGB(246, 248, 250),
 	}
 	local T = {
-		Version = "LiquidGlass-20261113B", Enabled = true, Style = 1,
+		Version = "LiquidGlass-20261113C", Enabled = true, Style = 1,
 		Purple1 = Color3.fromRGB(94, 92, 230), Purple2 = Color3.fromRGB(191, 90, 242),
 		Radius = 0, Snow = true, SnowCount = 8, SnowAlpha = 0.75,
 		UnlockFPS = true, FPSTarget = 240, Glow = false, GlowThickness = 2, GlowAlpha = 0.35,
@@ -41719,7 +41719,15 @@ do
 				self.Visible = false
 				return false
 			end
-			st.WorldFolder.Parent = camera
+			if st.WorldFolder.Parent ~= camera then st.WorldFolder.Parent = camera end
+			-- 相机没动、窗口没动 → 几何完全不用重算（拖拽时才会脏，每帧 25 个 Part 的
+			-- CFrame 写入是真正的性能黑洞，静止时白算一遍纯属浪费）
+			local cfNow, vpNow = camera.CFrame, camera.ViewportSize
+			if self.Visible and self.LastCF == cfNow and self.LastPos == pos
+				and self.LastSize == size and self.LastVp == vpNow then
+				return true
+			end
+			self.LastCF, self.LastPos, self.LastSize, self.LastVp = cfNow, pos, size, vpNow
 			-- 必须大于相机 NearPlaneZ（默认 0.1），否则整块几何被近裁剪面裁掉
 			local depth = math.clamp(G.BlurDistance, 0.12, 0.60)
 			-- 自己算透视投影，不用 ViewportPointToRay(x,y,depth)：
@@ -41899,6 +41907,8 @@ do
 		st.Shown = st.Main.Visible ~= false and innerVisible and not st.Window.Closed
 	end
 	local blurFx
+	local LIGHTING = game:GetService("Lighting")
+
 	local function ensureEffect(camera, visible)
 		local mode = tostring(G.BlurMode or "fullscreen")
 		if mode == "fullscreen" then
@@ -41914,14 +41924,15 @@ do
 				blurFx.Size = wantSize
 			end
 			-- 窗口全部收起/关闭时必须摘掉，否则关了 UI 画面还是糊的
+			local lighting = LIGHTING
 			if visible then
-				blurFx.Parent = game:GetService("Lighting")
+				if blurFx.Parent ~= lighting then blurFx.Parent = lighting end
 				T.BlurStatus = "fullscreen"
 			else
-				blurFx.Parent = nil
+				if blurFx.Parent ~= nil then blurFx.Parent = nil end
 				T.BlurStatus = "inactive"
 			end
-			if effect then effect.Parent = nil end
+			if effect and effect.Parent ~= nil then effect.Parent = nil end
 			return
 		end
 		if blurFx then blurFx.Parent = nil end
@@ -41945,6 +41956,25 @@ do
 		effect.Parent = camera
 		T.BlurStatus = "camera-dof"
 	end
+	-- 帧率上限：不同执行器名字不一样，挨个试；都失败就算了，不报错
+	local function applyFpsCap(target)
+		target = math.clamp(tonumber(target) or 240, 60, 1000)
+		for _, name in ipairs({ "setfpscap", "setfpslimit", "fpscap" }) do
+			local f = rawget(_G, name)
+			if type(f) == "function" then
+				if pcall(f, target) then return true end
+			end
+		end
+		local seth = rawget(_G, "sethiddenproperty")
+		local us = rawget(_G, "UserSettings")
+		if type(seth) == "function" and us ~= nil then
+			if pcall(seth, us, "FrameRateCap", target) then return true end
+			if pcall(seth, us, "FrameRateManager", 1) then return true end
+		end
+		return false
+	end
+	T.SetFPS = applyFpsCap
+
 	local function stopRenderer()
 		if rendering then rendering:Disconnect(); rendering = nil end
 		if effect then effect:Destroy(); effect = nil end
@@ -42002,13 +42032,13 @@ do
 		GlowColor = Color3.new(1, 1, 1), GlowAlpha = 0.62, GlowRings = 8, GlowStep = 1.5,
 		KBColor = Color3.fromRGB(255, 214, 120), KBAlpha = 0.58,
 		GraphBase = Color3.fromRGB(255, 236, 172), GraphTint = Color3.fromRGB(255, 196, 64),
-		CardBase = Color3.fromRGB(255, 209, 122), SampleRate = 0.08,
+		CardBase = Color3.fromRGB(255, 209, 122), SampleRate = 0.07,
 		LightStyle = "glass",
 	}
 	T.UX = UX
 
 	local PLR = game:GetService("Players").LocalPlayer
-	local SEG = 40
+	local SEG = 56
 
 	makeCapsule = function(st)
 		if not G.Capsule or (G.CapsuleMobileOnly and not Input.TouchEnabled) then return nil end
@@ -42187,6 +42217,7 @@ do
 	local function hookSwitchSound(st)
 		local w = st.Window
 		if not w then return end
+		local hooked = 0
 		local function hookList(list)
 			if type(list) ~= "table" then return end
 			for _, el in pairs(list) do
@@ -42194,6 +42225,7 @@ do
 					local t = el.__type
 					if (t == "Toggle" or t == "Checkbox") and type(el.Set) == "function" then
 						el.CX_Sound = true
+						hooked = hooked + 1
 						local raw = el.Set
 						el.Set = function(self, v, a, b)
 							local changed = type(v) == "boolean" and v ~= el.Value
@@ -42221,9 +42253,17 @@ do
 		end
 		-- 元素是懒创建的：前几次密一点补扫，之后就收手，绝不挂全局输入
 		task.spawn(function()
+			local idle = 0
 			for i = 1, 26 do
 				if not st.Active then return end
+				local before = hooked
 				pcall(scan)
+				if hooked == before then
+					idle = idle + 1
+					if idle >= 3 and i > 4 then return end
+				else
+					idle = 0
+				end
 				task.wait(i <= 8 and 0.35 or 1.2)
 			end
 		end)
@@ -42794,73 +42834,67 @@ do
 			if not instance(gui) then st.Flying = false return end
 			local pos, size = bg.AbsolutePosition, bg.AbsoluteSize
 
-			-- 薄雾：先挡住 UI，碎片才有「拼起来」的落点
-			local cover = create(st, "Frame", {
-				Name = "CXFlyCover",
-				Size = UDim2.fromOffset(size.X, size.Y),
-				Position = UDim2.fromOffset(pos.X, pos.Y),
-				BackgroundColor3 = G.GlassColor,
-				BackgroundTransparency = 0.80,
-				BorderSizePixel = 0,
-				ZIndex = 78,
-			}, gui)
-			corner(st, cover, G.Radius, false)
-			pixelEdge(st, cover, G.Radius, Color3.fromRGB(210, 218, 232), 0.32)
-
-			local cols, rows = 5, 4
+			-- 拼图式：不铺白底、不盖住 UI。每片就是一小块玻璃（几乎全透明 + 一圈亮边），
+			-- 从自己落点旁边一小段距离带旋转飞进来、缩放弹回 1，一片接一片咬合。
+			local cols, rows = 6, 5
 			local cw, ch = size.X / cols, size.Y / rows
-			local shards, n = {}, 0
+			local pieces = {}
 			for cy = 0, rows - 1 do
 				for cx = 0, cols - 1 do
-					n = n + 1
 					local tx, ty = pos.X + cx * cw, pos.Y + cy * ch
-					local dir = (cx < cols / 2) and -1 or 1
-					local sh = create(st, "Frame", {
+					local sx = (math.random(0, 1) == 0) and -1 or 1
+					local sy = (math.random(0, 1) == 0) and -1 or 1
+					local from = UDim2.fromOffset(tx + sx * math.random(38, 96), ty + sy * math.random(38, 96))
+					local piece = create(st, "Frame", {
 						Name = "Shard",
 						Size = UDim2.fromOffset(cw + 1, ch + 1),
-						Position = UDim2.fromOffset(tx + dir * math.random(340, 780), ty + math.random(-460, 300)),
+						Position = from,
 						BackgroundColor3 = G.GlassColor,
-						BackgroundTransparency = 0.58,
+						BackgroundTransparency = 0.90,
 						BorderSizePixel = 0,
-						Rotation = math.random(-50, 50),
+						Rotation = math.random(-20, 20),
 						ZIndex = 80,
 					}, gui)
-					corner(st, sh, 10, false)
-					pixelEdge(st, sh, 10, Color3.fromRGB(216, 224, 238), 0.24)
-					shards[#shards + 1] = { Frame = sh, To = UDim2.fromOffset(tx, ty), Delay = n * 0.01 }
+					corner(st, piece, 8, false)
+					pixelEdge(st, piece, 8, Color3.fromRGB(238, 243, 252), 0.16)
+					local sc = create(st, "UIScale", { Scale = 0.58 }, piece)
+					pieces[#pieces + 1] = {
+						Frame = piece, Scale = sc,
+						To = UDim2.fromOffset(tx, ty),
+						Delay = (cx + cy) * 0.014 + math.random() * 0.03,
+					}
 				end
 			end
-			for _, item in ipairs(shards) do
+			local last = 0
+			for _, it in ipairs(pieces) do
+				if it.Delay > last then last = it.Delay end
 				pcall(function()
-					Tween:Create(item.Frame,
-						TweenInfo.new(0.38, Enum.EasingStyle.Quint, Enum.EasingDirection.Out, item.Delay),
-						{ Position = item.To, Rotation = 0, BackgroundTransparency = 0.40 }):Play()
+					local ti = TweenInfo.new(0.30, Enum.EasingStyle.Back, Enum.EasingDirection.Out, it.Delay)
+					Tween:Create(it.Frame, ti, {
+						Position = it.To, Rotation = 0, BackgroundTransparency = 0.86,
+					}):Play()
+					Tween:Create(it.Scale, ti, { Scale = 1 }):Play()
 				end)
 			end
-			-- 最后一片落地 +0.06s 后整体化开
-			task.delay(0.38 + #shards * 0.01 + 0.06, function()
+			-- 全部咬合后整块玻璃收边消失，露出底下的 UI
+			task.delay(0.30 + last + 0.10, function()
 				if not st.Window or st.Window.Closed then
-					for _, item in ipairs(shards) do pcall(function() item.Frame:Destroy() end) end
-					pcall(function() cover:Destroy() end)
+					for _, it in ipairs(pieces) do pcall(function() it.Frame:Destroy() end) end
 					st.Flying = false
 					return
 				end
-				if not instance(cover) then st.Flying = false return end
-				fadeAll(cover, 0.26)
-				for _, item in ipairs(shards) do
-					if instance(item.Frame) then fadeAll(item.Frame, 0.26) end
+				for _, it in ipairs(pieces) do
+					if instance(it.Frame) then fadeAll(it.Frame, 0.22) end
 				end
-				task.delay(0.32, function()
-					for _, item in ipairs(shards) do pcall(function() item.Frame:Destroy() end) end
-					pcall(function() cover:Destroy() end)
+				task.delay(0.28, function()
+					for _, it in ipairs(pieces) do pcall(function() it.Frame:Destroy() end) end
 					st.Flying = false
 				end)
 			end)
 		end)
 	end
 
-	-- ---------------------------------------------------------------------
-	-- 构建 / 渲染 / 销毁
+
 	-- ---------------------------------------------------------------------
 	function X.Attach(st)
 		if st.Style ~= 2 then return end
@@ -42970,7 +43004,7 @@ do
 		end
 
 		for _, st in ipairs(T.Instances) do
-			if st.Active and st.Style == 2 and st.Extras then
+			if st.Active and st.Style == 2 and st.Extras and not st.Window.Closed then
 				local ex = st.Extras
 
 				for kind, g in pairs(ex.Graphs) do
@@ -42994,18 +43028,20 @@ do
 				if ex.KB then
 					local sdt = math.min(dt, 0.05)
 					for _, k in pairs(ex.KB.Keys) do
-						local goal = k.Down and 0.90 or 1
-						-- 弹簧 + 阻尼：按下快收、松手回弹过头一点点，才不像死板缩放
-						k.Vel = k.Vel + (goal - k.Cur) * 900 * sdt
-						k.Vel = k.Vel * math.max(0, 1 - 24 * sdt)
-						k.Cur = math.clamp(k.Cur + k.Vel * sdt, 0.82, 1.08)
-						k.Scale.Scale = k.Cur
-						local press = math.clamp((1 - k.Cur) / 0.10, 0, 1)
-						k.Frame.BackgroundTransparency = 0.66 - press * 0.22
-						local rings = k.Rings
-						for i = 1, #rings do
-							local base = 0.60 + (i - 1) * 0.075
-							rings[i].ImageTransparency = math.clamp(base - press * 0.36, 0, 1)
+						-- 已经静止的键直接跳过：5 键 × 4 圈光晕，每帧白写 20 次属性
+						if k.Down or math.abs(k.Cur - 1) > 0.004 or math.abs(k.Vel) > 0.004 then
+							local goal = k.Down and 0.90 or 1
+							k.Vel = k.Vel + (goal - k.Cur) * 900 * sdt
+							k.Vel = k.Vel * math.max(0, 1 - 24 * sdt)
+							k.Cur = math.clamp(k.Cur + k.Vel * sdt, 0.82, 1.08)
+							k.Scale.Scale = k.Cur
+							local press = math.clamp((1 - k.Cur) / 0.10, 0, 1)
+							k.Frame.BackgroundTransparency = 0.66 - press * 0.22
+							local rings = k.Rings
+							for i = 1, #rings do
+								local base = 0.60 + (i - 1) * 0.075
+								rings[i].ImageTransparency = math.clamp(base - press * 0.36, 0, 1)
+							end
 						end
 					end
 				end
@@ -43283,7 +43319,7 @@ do
 		if w then
 			if acrylicBaseline == nil then acrylicBaseline = config.Acrylic == true end
 			if T.Enabled and style == 2 then w.IsOpenButtonEnabled = not (config.OpenButton and config.OpenButton.Enabled == false) end
-			if T.UnlockFPS and type(setfpscap) == "function" then pcall(setfpscap, T.FPSTarget) end
+			if T.UnlockFPS then pcall(applyFpsCap, T.FPSTarget) end
 			local ok, err = pcall(attach, w)
 			if not ok then T.LastError = tostring(err); T.Detach(w); __noop("[LiquidGlass] " .. tostring(err)) end
 		end
