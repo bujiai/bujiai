@@ -41459,7 +41459,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-13D  ux-suite
+-- Liquid Glass / 2026-11-14A  ux-suite
 -- Style 1 = original purple. Style 2 = clear liquid glass.
 -- 玻璃不再用「覆盖 Frame + 多层装饰」，而是直接改控件自身的底色/圆角：
 --   · 零覆盖层 -> 不可能挡住内容
@@ -41490,7 +41490,7 @@ do
 		Text = Color3.fromRGB(246, 248, 250),
 	}
 	local T = {
-		Version = "LiquidGlass-20261113D", Enabled = true, Style = 1,
+		Version = "LiquidGlass-20261114A", Enabled = true, Style = 1,
 		Purple1 = Color3.fromRGB(94, 92, 230), Purple2 = Color3.fromRGB(191, 90, 242),
 		Radius = 0, Snow = true, SnowCount = 8, SnowAlpha = 0.75,
 		UnlockFPS = true, FPSTarget = 240, Glow = false, GlowThickness = 2, GlowAlpha = 0.35,
@@ -42082,9 +42082,7 @@ do
 				if not p then return "You" end
 				local n = p.DisplayName
 				if type(n) ~= "string" or n == "" then n = p.Name end
-				local id = p.UserId
-				if type(id) ~= "number" then id = p.Name end
-				return string.format("You  ·  %s  ·  %s", tostring(n), tostring(id))
+				return string.format("You  ·  %s", tostring(n))
 			end,
 		}
 		st.Capsule = cap
@@ -42584,68 +42582,47 @@ do
 		local vp = World.CurrentCamera and World.CurrentCamera.ViewportSize
 		local yTop = (vp and vp.X < 520) and 46 or 8
 
-		-- 右侧炫彩脉冲长条：一整条贴住右边，从顶贯到底，跟卡片数量无关，开功能才亮
+		-- 右侧脉冲条：一条极窄的淡黄玻璃长条，贴住右边从上贯到下。
+		-- 不要外晕、不要圆角：外圈那层半透明宽条就是「像有遮罩」的来源。
 		local rail = create(st, "Frame", {
 			Name = "CXFeatureRail",
-			Size = UDim2.new(0, 6, 1, -24),
-			Position = UDim2.new(1, -10, 0.5, 0),
+			Size = UDim2.new(0, 3, 1, -24),
+			Position = UDim2.new(1, -12, 0.5, 0),
 			AnchorPoint = Vector2.new(1, 0.5),
 			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
 			ZIndex = 49,
 			Visible = false,
 		}, ex.Gui)
-		-- 外晕：宽一点、淡一点，上下用透明度收口，看起来是「光」不是「条」
-		local haloR = create(st, "Frame", {
-			Name = "Halo",
-			Size = UDim2.new(0, 16, 1, 0),
-			Position = UDim2.fromScale(0.5, 0.5),
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			BackgroundColor3 = Color3.new(1, 1, 1),
-			BackgroundTransparency = 0.80,
-			BorderSizePixel = 0,
-			ZIndex = 48,
-		}, rail)
-		corner(st, haloR, 8, false)
-		local haloGrad = create(st, "UIGradient", {
-			Name = "Rainbow", Color = rainbow(), Rotation = 90,
-			Transparency = NumberSequence.new({
-				NumberSequenceKeypoint.new(0, 1),
-				NumberSequenceKeypoint.new(0.16, 0.10),
-				NumberSequenceKeypoint.new(0.84, 0.10),
-				NumberSequenceKeypoint.new(1, 1),
-			}),
-		}, haloR)
-
 		local line = create(st, "Frame", {
 			Name = "Line",
 			Size = UDim2.fromScale(1, 1),
-			BackgroundColor3 = Color3.new(1, 1, 1),
-			BackgroundTransparency = 0.08,
+			BackgroundColor3 = Color3.fromRGB(255, 240, 198),
+			BackgroundTransparency = 0.42,
 			BorderSizePixel = 0,
 			ClipsDescendants = true,
 			ZIndex = 49,
 		}, rail)
-		corner(st, line, 3, false)
+			-- 上下淡收口 + 一点上下深浅，玻璃柱的质感
 		local lineGrad = create(st, "UIGradient", {
-			Name = "Rainbow", Color = rainbow(), Rotation = 90,
+			Name = "Glass", Rotation = 90,
+			Color = ColorSequence.new(Color3.fromRGB(255, 251, 236), Color3.fromRGB(255, 226, 158)),
 			Transparency = NumberSequence.new({
-				NumberSequenceKeypoint.new(0, 0.55),
-				NumberSequenceKeypoint.new(0.12, 0),
-				NumberSequenceKeypoint.new(0.88, 0),
-				NumberSequenceKeypoint.new(1, 0.55),
+				NumberSequenceKeypoint.new(0, 0.88),
+				NumberSequenceKeypoint.new(0.10, 0.10),
+				NumberSequenceKeypoint.new(0.90, 0.10),
+				NumberSequenceKeypoint.new(1, 0.88),
 			}),
 		}, line)
-
-		-- 两颗沿条流动的光斑：两头淡出 → 看着是「脉冲」而不是一根死亮的条
+		-- 两颗沿条流动的光斑，宽度和条身一致（紧贴），上下淡出 = 脉冲
 		local beads = {}
 		for i = 1, 2 do
 			local bead = create(st, "Frame", {
 				Name = "Bead" .. i,
-				Size = UDim2.new(1, 0, 0, 150),
+				Size = UDim2.new(1, 0, 0, 168),
 				Position = UDim2.fromScale(0, 0),
 				AnchorPoint = Vector2.new(0, 0.5),
-				BackgroundColor3 = Color3.new(1, 1, 1),
+				BackgroundColor3 = Color3.fromRGB(255, 253, 244),
 				BackgroundTransparency = 0.02,
 				BorderSizePixel = 0,
 				ZIndex = 50,
@@ -42654,7 +42631,7 @@ do
 				Name = "Fade",
 				Transparency = NumberSequence.new({
 					NumberSequenceKeypoint.new(0, 1),
-					NumberSequenceKeypoint.new(0.5, 0.05),
+					NumberSequenceKeypoint.new(0.5, 0.02),
 					NumberSequenceKeypoint.new(1, 1),
 				}),
 			}, bead)
@@ -42679,8 +42656,8 @@ do
 		}, holder)
 		ex.Cards = {
 			Holder = holder, Items = {}, Order = 0, Y = yTop,
-			Rail = rail, Line = line, LineGrad = lineGrad, HaloGrad = haloGrad,
-			Beads = beads, Phase = 0, Flow = 0,
+			Rail = rail, Line = line, LineGrad = lineGrad,
+			Beads = beads, Phase = 0,
 		}
 	end
 
@@ -42733,19 +42710,7 @@ do
 				TextStrokeTransparency = 0.55,
 				ZIndex = 51,
 			}, row)
-			-- 左侧炫彩细边：和右边长条同一套颜色，卡片才不显得孤立
-			local accent = create(st, "Frame", {
-				Name = "Accent",
-				Size = UDim2.new(0, 3, 1, -12),
-				Position = UDim2.new(0, 0, 0.5, 0),
-				AnchorPoint = Vector2.new(0, 0.5),
-				BackgroundColor3 = Color3.new(1, 1, 1),
-				BorderSizePixel = 0,
-				ZIndex = 52,
-			}, card)
-			corner(st, accent, 2, false)
-			create(st, "UIGradient", { Name = "Rainbow", Color = rainbow(), Rotation = 90 }, accent)
-			c.Items[name] = { Card = card, Accent = accent }
+			c.Items[name] = { Card = card }
 			if c.Rail then c.Rail.Visible = true end
 
 		else
@@ -42893,6 +42858,8 @@ do
 
 	function X.FlyIn(st)
 		if not UX.FlyIn or not st or not st.Extras or st.Flying then return end
+		-- 关窗时增强层是 Enabled=false 的，开场先把整块打开，否则碎片飞在隐形层里
+		if st.Extras.Gui and st.Extras.Gui.Enabled ~= true then st.Extras.Gui.Enabled = true end
 		local bg = st.Background
 		if not instance(bg) then return end
 		st.Flying = true
@@ -43085,8 +43052,13 @@ do
 		end
 
 		for _, st in ipairs(T.Instances) do
-			if st.Active and st.Style == 2 and st.Extras and not st.Window.Closed then
+			if st.Active and st.Style == 2 and st.Extras then
 				local ex = st.Extras
+				-- 关窗时整块增强层一起隐藏：否则图表/键盘会留在屏幕上冻住
+				local shown = not st.Window.Closed
+				if ex.Gui and ex.Gui.Enabled ~= shown then ex.Gui.Enabled = shown end
+				if not shown then ex = nil end
+				if ex then
 
 				for kind, g in pairs(ex.Graphs) do
 					if g.Root.Visible and g.Root.Parent then
@@ -43130,20 +43102,16 @@ do
 				local rail = ex.Cards and ex.Cards.Rail
 				if rail and rail.Visible then
 					local c = ex.Cards
-					-- 渐变沿条身慢慢流动（Offset 推着彩虹往下走），一圈 2 个周期无缝
-					c.Flow = (c.Flow + dt * 0.45) % 2
-					local flow = c.Flow - 1
-					c.LineGrad.Offset = Vector2.new(0, flow)
-					if c.HaloGrad then c.HaloGrad.Offset = Vector2.new(0, flow * 0.7) end
-					-- 两颗光斑匀速下滑，错开半个周期 → 看起来是连续脉冲
+					-- 光斑匀速下滑，错开半个周期 → 看起来是连续脉冲
 					c.Phase = (c.Phase + dt * 0.34) % 1
 					for i = 1, #c.Beads do
 						local p = (c.Phase + (i - 1) * 0.5) % 1
 						c.Beads[i].Position = UDim2.new(0, 0, p * 1.24 - 0.12, 0)
 					end
-					-- 整条轻微呼吸，别像一根死亮的线
-					c.Line.BackgroundTransparency = 0.10 - math.abs(math.sin(c.Phase * 6.283)) * 0.06
+					-- 整条玻璃呼吸一下，别像一根死亮的线
+					c.Line.BackgroundTransparency = 0.44 - math.abs(math.sin(c.Phase * 6.283)) * 0.08
 				end
+			end
 			end
 		end
 	end
