@@ -41459,7 +41459,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-14A  ux-suite
+-- Liquid Glass / 2026-11-26A  ux-suite
 -- Style 1 = original purple. Style 2 = clear liquid glass.
 -- 玻璃不再用「覆盖 Frame + 多层装饰」，而是直接改控件自身的底色/圆角：
 --   · 零覆盖层 -> 不可能挡住内容
@@ -41475,16 +41475,16 @@ do
 	local WHITE = Color3.new(1, 1, 1)
 
 	local G = {
-		Name = "LiquidGlass", Radius = 28, TabRadius = 16, ControlRadius = 12,
+		Name = "LiquidGlass", Radius = 20, TabRadius = 12, ControlRadius = 9,
 		-- 玻璃 = 控件自身底色，不铺白块、不叠层
 		GlassColor = WHITE, GlassOpacity = 0,
 		-- "fullscreen" = 全屏 BlurEffect（唯一能真正均匀覆盖的方案）
 		-- "dof"        = 相机景深（对透明玻璃无效，仅给非透明物体用）
 		-- "off"        = 关闭
 		BlurMode = "fullscreen",
-		Blur = true, BlurStrength = 0.6, BlurDistance = 0.12, BlurSegments = 8,
+		Blur = true, BlurStrength = 0.95, BlurDistance = 0.12, BlurSegments = 8,
 		-- 模糊区域相对 UI 的像素偏移（正值 = 往右下移），用于微调对齐
-		BlurOffsetX = 0, BlurOffsetY = 6,
+		BlurOffsetX = 0, BlurOffsetY = 0,
 		ScaleMin = 0.50, ScaleMax = 1.60, ScaleStep = 0.05,
 		Capsule = true, CapsuleMobileOnly = false,
 		Text = Color3.fromRGB(246, 248, 250),
@@ -41737,9 +41737,26 @@ do
 			local halfH = math.tan(fov * 0.5) * depth
 			local halfW = halfH * (vp.X / math.max(1, vp.Y))
 			local cf = camera.CFrame
+			-- GUI 若忽略顶栏 inset（IgnoreGuiInset=true），AbsolutePosition 从屏幕顶算，
+			-- 而 ViewportSize 从顶栏下方算 → 两者差 36px，模糊会整体偏上。
+			-- 这里把这段差值补回投影坐标。
+			local insetY = 0
+			pcall(function()
+				local node = self.Gui
+				for _ = 1, 6 do
+					if not instance(node) then break end
+					if node:IsA("ScreenGui") then
+						if node.IgnoreGuiInset then
+							insetY = game:GetService("GuiService"):GetGuiInset().Y
+						end
+						break
+					end
+					node = node.Parent
+				end
+			end)
 			local function project(x, y)
 				local nx = (x / math.max(1, vp.X) - 0.5) * 2
-				local ny = (0.5 - y / math.max(1, vp.Y)) * 2
+				local ny = (0.5 - (y + insetY) / math.max(1, vp.Y)) * 2
 				return cf * Vector3.new(nx * halfW, ny * halfH, -depth)
 			end
 			local tl = project(pos.X, pos.Y)
@@ -42027,12 +42044,12 @@ do
 
 	-- 界面增强层的可调项（提前声明：胶囊里也要用）
 	local UX = {
-		Graphs = true, Keyboard = true, Glow = true, Sound = true,
+		Graphs = true, Keyboard = true, Glow = true, Sound = true, Weather = true,
 		Toasts = true, Cards = true, FlyIn = true,
-		GlowColor = Color3.new(1, 1, 1), GlowAlpha = 0.62, GlowRings = 8, GlowStep = 1.5,
+		GlowColor = Color3.new(1, 1, 1), GlowAlpha = 0.74, GlowRings = 10, GlowStep = 1.4,
 		KBColor = Color3.fromRGB(255, 214, 120), KBAlpha = 0.58,
 		GraphBase = Color3.fromRGB(255, 236, 172), GraphTint = Color3.fromRGB(255, 196, 64),
-		CardBase = Color3.fromRGB(255, 209, 122), SampleRate = 0.07,
+		CardBase = Color3.fromRGB(255, 209, 122), SampleRate = 0.15,
 		LightStyle = "glass",
 	}
 	T.UX = UX
@@ -42339,9 +42356,9 @@ do
 			BorderSizePixel = 0,
 			ZIndex = 60,
 		}, root)
-		corner(st, shell, 14, false)
-		pixelEdge(st, shell, 14, Color3.fromRGB(255, 216, 128), 0.34)
-		haloGlow(st, shell, 14, Color3.fromRGB(255, 232, 150), 0.50, 6, 2)
+		corner(st, shell, 12, false)
+		pixelEdge(st, shell, 12, Color3.fromRGB(255, 216, 128), 0.34)
+		haloGlow(st, shell, 12, Color3.fromRGB(255, 232, 150), 0.46, 4, 2)
 
 		local title = create(st, "TextLabel", {
 			Name = "Title",
@@ -42505,16 +42522,96 @@ do
 		{ key = Enum.KeyCode.A, label = "A", x = 0, y = 52, w = 46 },
 		{ key = Enum.KeyCode.S, label = "S", x = 46, y = 52, w = 46 },
 		{ key = Enum.KeyCode.D, label = "D", x = 92, y = 52, w = 46 },
-		{ key = Enum.KeyCode.Space, label = "SPACE", x = 0, y = 104, w = 138 },
 	}
+
+	-- =====================================================================
+	-- 天气层：雪花 / 雨滴（低开销 —— 固定数量对象复用，0.05s 更新一次）
+	-- =====================================================================
+	local WEATHER = { Snow = 26, Rain = 14 }
+
+	local function buildWeather(st)
+		local ex = st.Extras
+		if not ex or not instance(ex.Gui) then return end
+		local layer = create(st, "Frame", {
+			Name = "CXWeather", Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 40,
+		}, ex.Gui)
+		ex.Weather = { Root = layer, Snow = {}, Rain = {}, Acc = 0 }
+		local W = ex.Weather
+
+		for i = 1, WEATHER.Snow do
+			local dot = create(st, "Frame", {
+				Name = "S" .. i, Size = UDim2.fromOffset(3, 3),
+				BackgroundColor3 = Color3.fromRGB(255, 250, 252),
+				BackgroundTransparency = 0.35, BorderSizePixel = 0, ZIndex = 41,
+			}, layer)
+			corner(st, dot, 3, false)
+			W.Snow[i] = {
+				Dot = dot, X = math.random(), Y = math.random(),
+				Spd = 0.05 + math.random() * 0.08, Drift = (math.random() - 0.5) * 0.02,
+				Phase = math.random() * 6.28, Size = 2 + math.random() * 2,
+			}
+		end
+
+		for i = 1, WEATHER.Rain do
+			local drop = create(st, "Frame", {
+				Name = "R" .. i, Size = UDim2.fromOffset(1.5, 10),
+				BackgroundColor3 = Color3.fromRGB(235, 245, 255),
+				BackgroundTransparency = 0.45, BorderSizePixel = 0, ZIndex = 41,
+			}, layer)
+			corner(st, drop, 1, false)
+			W.Rain[i] = {
+				Dot = drop, X = math.random(), Y = math.random(),
+				Spd = 0.35 + math.random() * 0.35, Wig = math.random() * 6.28,
+			}
+		end
+	end
+
+	-- 每帧只做一次坐标写入；用 AbsoluteSize 的像素算，避免 UIScale 误差
+	local function stepWeather(st, dt)
+		local ex = st.Extras
+		local W = ex and ex.Weather
+		if not W then return end
+		W.Acc = W.Acc + dt
+		if W.Acc < 0.05 then return end
+		local step = W.Acc
+		W.Acc = 0
+
+		local sz = W.Root.AbsoluteSize
+		if sz.X < 8 or sz.Y < 8 then return end
+		local now = os.clock()
+
+		for i = 1, #W.Snow do
+			local p = W.Snow[i]
+			p.Y = p.Y + p.Spd * step
+			p.Phase = p.Phase + step * 1.6
+			if p.Y > 1 then p.Y = -0.03 p.X = math.random() end
+			local px = (p.X + math.sin(p.Phase) * 0.018) % 1
+			local d = p.Dot
+			d.Position = UDim2.fromOffset(px * sz.X, p.Y * sz.Y)
+			d.Size = UDim2.fromOffset(p.Size, p.Size)
+			-- 靠近底部淡出
+			d.BackgroundTransparency = 0.30 + p.Y * 0.45
+		end
+
+		for i = 1, #W.Rain do
+			local p = W.Rain[i]
+			p.Y = p.Y + p.Spd * step
+			if p.Y > 1 then p.Y = -0.05 p.X = math.random() end
+			local px = (p.X + math.sin(now * 2 + p.Wig) * 0.006) % 1
+			local d = p.Dot
+			d.Position = UDim2.fromOffset(px * sz.X, p.Y * sz.Y)
+			d.BackgroundTransparency = 0.40 + p.Y * 0.35
+		end
+	end
 
 	local function buildKeyboard(st)
 		if not Input.KeyboardEnabled or Input.TouchEnabled then return end
 		local ex = st.Extras
 		local root = create(st, "Frame", {
 			Name = "CXKeyboard",
-			Size = UDim2.fromOffset(160, 160),
-			Position = UDim2.new(0, 18, 0.5, -80),
+			Size = UDim2.fromOffset(140, 100),
+			Position = UDim2.new(0, 18, 0.5, -50),
 			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
 			ZIndex = 55,
@@ -42532,7 +42629,7 @@ do
 			}, root)
 			corner(st, key, 11, false)
 			pixelEdge(st, key, 11, Color3.fromRGB(255, 226, 150), 0.42)
-			local rings = haloGlow(st, key, 11, UX.KBColor, UX.KBAlpha, 4, 2)
+			local rings = haloGlow(st, key, 11, UX.KBColor, UX.KBAlpha, 1, 1.5)
 			local txt = create(st, "TextLabel", {
 				Size = UDim2.fromScale(1, 1),
 				BackgroundTransparency = 1,
@@ -42943,7 +43040,358 @@ do
 
 
 	-- ---------------------------------------------------------------------
+	-- =====================================================================
+	-- 源码级强制增强（任何脚本加载这个 WindUI 都自动生效）
+	--   · 自定义字体（Cubic_11.ttf，执行器下载 + getcustomasset）
+	--   · 强制启动图（先拉图 → 播放 → 再出 UI）
+	--   · 天空（粉白樱花色调 + 飘字 Angel / Tylox）
+	-- =====================================================================
+	local CORE = { font = nil, fontTried = false, bootDone = false, skyDone = false,
+		fontUrl = {
+			"https://raw.githubusercontent.com/bujiai/bujiai/main/Cubic_11.ttf",
+			"https://ghproxy.net/https://raw.githubusercontent.com/bujiai/bujiai/main/Cubic_11.ttf",
+			"https://cdn.jsdelivr.net/gh/bujiai/bujiai@main/Cubic_11.ttf",
+		},
+		bootUrl = {
+			"https://tylox.gf.b0a.cn/img/jiazai.png",
+			"https://rilenty.gf.b0a.cn/img/jiazai.png",
+		},
+		words = { "Angel", "Tylox", "Angel  Tylox" },
+		parts = {},
+	}
+
+	local function httpGet(u)
+		local body = nil
+		pcall(function() body = game:HttpGet(u) end)
+		if type(body) ~= "string" or #body < 512 then
+			pcall(function()
+				if type(request) == "function" then
+					local r = request({ Url = u, Method = "GET" })
+					if type(r) == "table" and type(r.Body) == "string" then body = r.Body end
+				end
+			end)
+		end
+		if type(body) ~= "string" or #body < 512 then
+			pcall(function()
+				if type(syn) == "table" and type(syn.request) == "function" then
+					local r = syn.request({ Url = u, Method = "GET" })
+					if type(r) == "table" and type(r.Body) == "string" then body = r.Body end
+				end
+			end)
+		end
+		return (type(body) == "string" and #body >= 512) and body or nil
+	end
+
+	local function loadFont()
+		if CORE.font ~= nil then return CORE.font end
+		if CORE.fontTried then return nil end
+		CORE.fontTried = true
+		if type(getcustomasset) ~= "function" then return nil end
+		local name = "Cubic_11.ttf"
+		if type(isfile) == "function" then
+			local ok, yes = pcall(isfile, name)
+			if ok and yes then
+				local ok2, a = pcall(getcustomasset, name)
+				if ok2 and type(a) == "string" and #a > 0 then
+					local ok3, f = pcall(function() return Font.new(a) end)
+					if ok3 and f ~= nil then CORE.font = f return f end
+				end
+			end
+		end
+		if type(writefile) ~= "function" then return nil end
+		for _, u in ipairs(CORE.fontUrl) do
+			local body = httpGet(u)
+			if body ~= nil and #body > 10000 then
+				if pcall(writefile, name, body) then
+					local ok, a = pcall(getcustomasset, name)
+					if ok and type(a) == "string" and #a > 0 then
+						local ok2, f = pcall(function() return Font.new(a) end)
+						if ok2 and f ~= nil then CORE.font = f return f end
+					end
+				end
+			end
+		end
+		return nil
+	end
+
+	local function applyFont(root)
+		if root == nil or CORE.font == nil then return end
+		pcall(function()
+			for _, d in ipairs(root:GetDescendants()) do
+				local c = d.ClassName
+				if c == "TextLabel" or c == "TextButton" or c == "TextBox" then
+					pcall(function() d.FontFace = CORE.font end)
+				end
+			end
+		end)
+	end
+
+	local function playBoot(st)
+		if CORE.bootDone or not instance(st and st.Main) then return end
+		CORE.bootDone = true
+		local parent = st.Main
+		local asset = nil
+		if type(getcustomasset) == "function" and type(writefile) == "function" then
+			local name = "cx_boot.png"
+			local ok, yes = false, false
+			if type(isfile) == "function" then ok, yes = pcall(isfile, name) end
+			if ok and yes then
+				local ok2, a = pcall(getcustomasset, name)
+				if ok2 and type(a) == "string" and #a > 0 then asset = a end
+			end
+			if asset == nil then
+				for _, u in ipairs(CORE.bootUrl) do
+					local body = httpGet(u)
+					if body ~= nil and #body >= 512 then
+						if pcall(writefile, name, body) then
+							local ok3, a = pcall(getcustomasset, name)
+							if ok3 and type(a) == "string" and #a > 0 then asset = a break end
+						end
+					end
+				end
+			end
+		end
+		if asset == nil then return end
+
+		local W, H = 560, 266
+		local holder, img = nil, nil
+		pcall(function()
+			holder = create(st, "Frame", {
+				Name = "b" .. tostring(math.random(1000, 9999)),
+				AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0),
+				Size = UDim2.fromOffset(0, H), BackgroundTransparency = 1,
+				ClipsDescendants = true, ZIndex = 9000,
+			}, parent)
+			img = create(st, "ImageLabel", {
+				Name = "i" .. tostring(math.random(1000, 9999)),
+				AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0),
+				Size = UDim2.fromOffset(W, H), BackgroundTransparency = 1,
+				Image = asset, ScaleType = Enum.ScaleType.Fit,
+				ImageTransparency = 1, ZIndex = 9001,
+			}, holder)
+		end)
+		if holder == nil or img == nil then return end
+		pcall(function()
+			local TS = game:GetService("TweenService")
+			TS:Create(img, TweenInfo.new(0.7, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+				{ ImageTransparency = 0.05 }):Play()
+			TS:Create(holder, TweenInfo.new(0.8, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+				{ Size = UDim2.fromOffset(W, H) }):Play()
+		end)
+		task.wait(1.6)
+		pcall(function()
+			local TS = game:GetService("TweenService")
+			TS:Create(holder, TweenInfo.new(0.55, Enum.EasingStyle.Quint, Enum.EasingDirection.In),
+				{ Size = UDim2.fromOffset(0, H) }):Play()
+			TS:Create(img, TweenInfo.new(0.55), { ImageTransparency = 1 }):Play()
+		end)
+		task.wait(0.6)
+		pcall(function() holder:Destroy() end)
+	end
+
+	local function setupSky()
+		if CORE.skyDone then return end
+		CORE.skyDone = true
+		pcall(function()
+			local L = game:GetService("Lighting")
+			local atm = L:FindFirstChildOfClass("Atmosphere")
+			if atm == nil then atm = Instance.new("Atmosphere") atm.Parent = L end
+			atm.Density = 0.34; atm.Offset = 0.10
+			atm.Color = Color3.fromRGB(255, 232, 242)
+			atm.Decay = Color3.fromRGB(255, 208, 226)
+			atm.Glare = 0.30; atm.Haze = 1.6
+			local cc = L:FindFirstChild("CX_SkyTint")
+			if cc == nil then
+				cc = Instance.new("ColorCorrectionEffect")
+				cc.Name = "CX_SkyTint"; cc.Parent = L
+			end
+			cc.TintColor = Color3.fromRGB(255, 238, 246)
+			cc.Saturation = 0.10; cc.Brightness = 0.02; cc.Contrast = 0.03
+		end)
+
+		-- 代码天空盒：倒置球 + SurfaceGui 渐变（不需要任何贴图资源）
+		pcall(function()
+			local dome = Instance.new("Part")
+			dome.Name = "cx" .. tostring(math.random(100000, 999999))
+			dome.Shape = Enum.PartType.Ball
+			dome.Size = Vector3.new(9000, 9000, 9000)
+			dome.Anchored = true
+			dome.CanCollide = false
+			dome.CanTouch = false
+			dome.CanQuery = false
+			dome.CastShadow = false
+			dome.Material = Enum.Material.SmoothPlastic
+			dome.Color = Color3.fromRGB(8, 6, 10)
+			dome.Parent = workspace
+
+			local sg = Instance.new("SurfaceGui")
+			sg.Face = Enum.NormalId.Back
+			sg.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
+			sg.CanvasSize = Vector2.new(1024, 512)
+			sg.LightInfluence = 0
+			sg.AlwaysOnTop = false
+			sg.Parent = dome
+
+			local base = Instance.new("Frame")
+			base.Size = UDim2.fromScale(1, 1)
+			base.BackgroundColor3 = Color3.new(1, 1, 1)
+			base.BorderSizePixel = 0
+			base.Parent = sg
+			local bg = Instance.new("UIGradient")
+			bg.Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 246, 250)),
+				ColorSequenceKeypoint.new(0.30, Color3.fromRGB(255, 232, 243)),
+				ColorSequenceKeypoint.new(0.62, Color3.fromRGB(253, 220, 236)),
+				ColorSequenceKeypoint.new(0.85, Color3.fromRGB(250, 206, 228)),
+				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(244, 196, 220)),
+			})
+			bg.Rotation = 90
+			bg.Parent = base
+
+			local bands = {}
+			local palettes = {
+				{ Color3.fromRGB(150, 255, 210), Color3.fromRGB(120, 220, 255) },
+				{ Color3.fromRGB(190, 160, 255), Color3.fromRGB(255, 180, 235) },
+				{ Color3.fromRGB(140, 240, 255), Color3.fromRGB(160, 255, 190) },
+			}
+			for i = 1, 3 do
+				local band = Instance.new("Frame")
+				band.Name = "A" .. i
+				band.Size = UDim2.new(1.0, 0, 0, 92 + i * 26)
+				band.Position = UDim2.new(0, 0, 0.18 + i * 0.14, 0)
+				band.BackgroundColor3 = Color3.new(1, 1, 1)
+				band.BackgroundTransparency = 0.62
+				band.BorderSizePixel = 0
+				band.Rotation = -6 + i * 5
+				band.Parent = base
+
+				local g = Instance.new("UIGradient")
+				local c1, c2 = palettes[i][1], palettes[i][2]
+				g.Color = ColorSequence.new({
+					ColorSequenceKeypoint.new(0.00, c1),
+					ColorSequenceKeypoint.new(0.45, c2),
+					ColorSequenceKeypoint.new(0.55, c1),
+					ColorSequenceKeypoint.new(1.00, c2),
+				})
+				g.Transparency = NumberSequence.new({
+					NumberSequenceKeypoint.new(0.00, 1),
+					NumberSequenceKeypoint.new(0.30, 0.15),
+					NumberSequenceKeypoint.new(0.55, 0.30),
+					NumberSequenceKeypoint.new(0.78, 0.10),
+					NumberSequenceKeypoint.new(1.00, 1),
+				})
+				g.Rotation = 0
+				g.Offset = Vector2.new(0, 0)
+				g.Parent = band
+				bands[i] = band
+			end
+
+			CORE.dome = dome
+			CORE.bands = bands
+		end)
+
+		-- 相机跟随 + 极光流动
+		task.spawn(function()
+			local t0 = os.clock()
+			while true do
+				task.wait(0.05)
+				local cam = workspace.CurrentCamera
+				if cam ~= nil and CORE.dome ~= nil and CORE.dome.Parent ~= nil then
+					pcall(function() CORE.dome.CFrame = CFrame.new(cam.CFrame.Position) end)
+					local t = os.clock() - t0
+					for i = 1, #(CORE.bands or {}) do
+						local band = CORE.bands[i]
+						if band.Parent ~= nil then
+							local g = band:FindFirstChildOfClass("UIGradient")
+							if g ~= nil then
+								local ph = t * (0.06 + i * 0.017) + i * 0.9
+								pcall(function()
+									g.Offset = Vector2.new(math.sin(ph) * 0.42, 0)
+									g.Rotation = -10 + math.sin(ph * 0.7) * 14
+								end)
+								pcall(function()
+									band.BackgroundTransparency = 0.52 + 0.18 * math.sin(ph * 1.4)
+								end)
+							end
+						end
+					end
+				end
+			end
+		end)
+
+		task.spawn(function()
+			while true do
+				task.wait(4.5)
+				pcall(function()
+					if #CORE.parts >= 7 then return end
+					local cam = workspace.CurrentCamera
+					if cam == nil then return end
+					local part = Instance.new("Part")
+					part.Anchored = true; part.CanCollide = false
+					part.CanTouch = false; part.CanQuery = false
+					part.CastShadow = false; part.Transparency = 1
+					part.Size = Vector3.new(1, 1, 1)
+					part.Name = "s" .. tostring(math.random(10000, 99999))
+					part.Parent = workspace
+					local gui = Instance.new("BillboardGui")
+					gui.Size = UDim2.fromOffset(360, 80)
+					gui.LightInfluence = 0; gui.MaxDistance = 4000
+					gui.Parent = part
+					local lb = Instance.new("TextLabel")
+					lb.Size = UDim2.fromScale(1, 1); lb.BackgroundTransparency = 1
+					lb.Text = CORE.words[math.random(1, #CORE.words)]
+					lb.TextScaled = true; lb.Font = Enum.Font.GothamBold
+					lb.TextColor3 = (math.random() < 0.5) and Color3.new(1, 1, 1)
+						or Color3.fromRGB(255, 214, 232)
+					lb.TextTransparency = 0.15
+					lb.TextStrokeColor3 = Color3.fromRGB(255, 240, 248)
+					lb.TextStrokeTransparency = 0.35
+					lb.Parent = gui
+					CORE.parts[#CORE.parts + 1] = {
+						part = part, gui = gui, born = os.clock(),
+						a = math.random() * 6.28,
+						r = 260 + math.random() * 420,
+						h = 220 + math.random() * 260,
+					}
+				end)
+				pcall(function()
+					local cam = workspace.CurrentCamera
+					if cam == nil then return end
+					for _, it in ipairs(CORE.parts) do
+						if it.part.Parent ~= nil then
+							local age = os.clock() - it.born
+							it.a = it.a + 0.0016
+							it.part.CFrame = CFrame.new(cam.CFrame.Position
+								+ Vector3.new(math.cos(it.a) * it.r, it.h, math.sin(it.a) * it.r))
+							local lb = it.gui:FindFirstChildOfClass("TextLabel")
+							if lb ~= nil then
+								local a = math.min(1, age / 1.6) * math.min(1, math.max(0, (14 - age) / 3))
+								lb.TextTransparency = 1 - a * 0.85
+							end
+						end
+					end
+				end)
+			end
+		end)
+	end
+
+
+	local function coreInit(st)
+		if not instance(st and st.Main) then return end
+		pcall(setupSky)
+		task.spawn(function()
+			pcall(playBoot, st)
+			local f = loadFont()
+			if f ~= nil then
+				task.wait(0.25)
+				applyFont(st.Main)
+				task.delay(1.2, function() pcall(applyFont, st.Main) end)
+			end
+		end)
+	end
+
 	function X.Attach(st)
+		pcall(coreInit, st)
 		if st.Style ~= 2 then return end
 		st.Extras = { Graphs = {}, GraphOff = {} }
 		local gui = newGui(st)
@@ -42960,6 +43408,9 @@ do
 		end
 		if UX.Keyboard then
 			pcall(buildKeyboard, st)
+		end
+		if UX.Weather ~= false then
+			pcall(buildWeather, st)
 		end
 
 		if UX.Glow then
@@ -42981,6 +43432,42 @@ do
 			end
 		end)
 		pcall(hookSwitchSound, st)
+
+		-- 开关轨道「浅粉 ↔ 白」流动色。
+		-- 性能考虑：只收集一次 BarOverlay 列表，每 0.06s 批量改 ImageColor3，
+		-- 不用每帧 GetDescendants()（那是最大的开销来源）。
+		pcall(function()
+			local PINK = Color3.fromRGB(255, 205, 226)
+			local WHITE = Color3.new(1, 1, 1)
+			local bars = {}
+			local function collect()
+				local out = {}
+				local root = st.Main
+				if not instance(root) then bars = out return end
+				for _, d in ipairs(root:GetDescendants()) do
+					if d.Name == "BarOverlay" then out[#out + 1] = d end
+				end
+				bars = out
+			end
+			collect()
+			task.spawn(function()
+				local t0 = os.clock()
+				local acc = 0
+				while st.Active do
+					local ph = (os.clock() - t0) * 1.6
+					for i = 1, #bars do
+						local d = bars[i]
+						if d.Parent ~= nil then
+							local w = 0.5 + 0.5 * math.sin(ph + i * 0.7)
+							pcall(function() d.ImageColor3 = PINK:Lerp(WHITE, w) end)
+						end
+					end
+					task.wait(0.06)
+					acc = acc + 0.06
+					if acc >= 3 then acc = 0 pcall(collect) end
+				end
+			end)
+		end)
 
 		-- 首次开场：CreateWindow 里 Open 的协程已经在 0.06s 后自己跑了，
 		-- 包 w.Open 拦不到这一次，所以这里按「Main 还没长高」判断是不是开场，
@@ -43055,10 +43542,11 @@ do
 			if st.Active and st.Style == 2 and st.Extras then
 				local ex = st.Extras
 				-- 关窗时整块增强层一起隐藏：否则图表/键盘会留在屏幕上冻住
-				local shown = not st.Window.Closed
-				if ex.Gui and ex.Gui.Enabled ~= shown then ex.Gui.Enabled = shown end
-				if not shown then ex = nil end
+				-- 常驻：WASD 键盘 / FPS / PING 不跟随窗口开关
+				local shown = true
+				if ex.Gui and ex.Gui.Enabled ~= true then ex.Gui.Enabled = true end
 				if ex then
+				pcall(stepWeather, st, dt)
 
 				for kind, g in pairs(ex.Graphs) do
 					if g.Root.Visible and g.Root.Parent then
@@ -43327,6 +43815,41 @@ do
 		return n
 	end
 	function T.Toggle() return T.SetStyle(T.Style == 2 and 1 or 2) end
+
+	-- 玻璃色调：default / pink / aurora（源码级，任何脚本都能 call）
+	T.Tint = "default"
+	local TINT_T0 = os.clock()
+	function T.SetTint(name)
+		name = tostring(name or "default")
+		if name ~= "pink" and name ~= "aurora" then name = "default" end
+		T.Tint = name
+		local G = T.Glass
+		if G == nil then return end
+		pcall(function()
+			if name == "pink" then
+				G.GlassColor = Color3.fromRGB(255, 226, 238)
+				G.GlassOpacity = 0.10
+			elseif name == "default" then
+				G.GlassColor = Color3.new(1, 1, 1)
+				G.GlassOpacity = 0
+			end
+		end)
+		if T.Refresh then pcall(T.Refresh) end
+		return name
+	end
+
+	-- 极光驱动：色相缓慢流转，0.08s 一次
+	task.spawn(function()
+		while true do
+			task.wait(0.08)
+			if T.Tint == "aurora" and T.Glass ~= nil then
+				local h = ((os.clock() - TINT_T0) * 0.05) % 1
+				pcall(function()
+					T.Glass.GlassColor = Color3.fromHSV(h, 0.35, 1)
+				end)
+			end
+		end
+	end)
 	function T.SetEnabled(on)
 		local windows = {}
 		for _, st in ipairs(T.Instances) do windows[#windows + 1] = st.Window end
