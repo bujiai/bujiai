@@ -41459,7 +41459,7 @@ do
 	end)
 end
 
--- Liquid Glass / 2026-11-26A  ux-suite
+-- Liquid Glass / 2026-11-26B  ux-suite
 -- Style 1 = original purple. Style 2 = clear liquid glass.
 -- 玻璃不再用「覆盖 Frame + 多层装饰」，而是直接改控件自身的底色/圆角：
 --   · 零覆盖层 -> 不可能挡住内容
@@ -42048,14 +42048,14 @@ do
 		Toasts = true, Cards = true, FlyIn = true,
 		GlowColor = Color3.new(1, 1, 1), GlowAlpha = 0.74, GlowRings = 10, GlowStep = 1.4,
 		KBColor = Color3.fromRGB(255, 214, 120), KBAlpha = 0.58,
-		GraphBase = Color3.fromRGB(255, 236, 172), GraphTint = Color3.fromRGB(255, 196, 64),
+		GraphBase = Color3.fromRGB(255, 242, 248), GraphTint = Color3.fromRGB(255, 168, 208),
 		CardBase = Color3.fromRGB(255, 209, 122), SampleRate = 0.15,
 		LightStyle = "glass",
 	}
 	T.UX = UX
 
 	local PLR = game:GetService("Players").LocalPlayer
-	local SEG = 56
+	local SEG = 36
 
 	makeCapsule = function(st)
 		if not G.Capsule or (G.CapsuleMobileOnly and not Input.TouchEnabled) then return nil end
@@ -42357,8 +42357,8 @@ do
 			ZIndex = 60,
 		}, root)
 		corner(st, shell, 12, false)
-		pixelEdge(st, shell, 12, Color3.fromRGB(255, 216, 128), 0.34)
-		haloGlow(st, shell, 12, Color3.fromRGB(255, 232, 150), 0.46, 4, 2)
+		pixelEdge(st, shell, 12, Color3.fromRGB(255, 214, 232), 0.30)
+		haloGlow(st, shell, 12, Color3.fromRGB(255, 208, 230), 0.44, 4, 2)
 
 		local title = create(st, "TextLabel", {
 			Name = "Title",
@@ -42429,17 +42429,22 @@ do
 
 		local segs = {}
 		local col = UX.GraphTint
+		local WHITE = Color3.new(1, 1, 1)
 		for i = 1, SEG do
+			-- 渐变：靠左浓粉、靠右趋白，视觉上像一条流动的光带
+			local mix = (i - 1) / math.max(1, SEG - 1)
+			local segCol = col:Lerp(WHITE, mix * 0.55)
 			segs[i] = create(st, "Frame", {
 				Name = "S" .. i,
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				Size = UDim2.new(0, 2, 0, 2),
 				Position = UDim2.fromScale(0, 0.5),
-				BackgroundColor3 = col,
+				BackgroundColor3 = segCol,
 				BackgroundTransparency = 0.04,
 				BorderSizePixel = 0,
 				ZIndex = 61,
 			}, plot)
+			corner(st, segs[i], 2, false)
 		end
 
 		local dragging, startPos, origin = false, nil, nil
@@ -42572,6 +42577,12 @@ do
 		local ex = st.Extras
 		local W = ex and ex.Weather
 		if not W then return end
+		-- UX.Weather 关掉时整层隐藏（不做无用计算）
+		if UX.Weather == false then
+			if W.Root.Visible then W.Root.Visible = false end
+			return
+		end
+		if not W.Root.Visible then W.Root.Visible = true end
 		W.Acc = W.Acc + dt
 		if W.Acc < 0.05 then return end
 		local step = W.Acc
@@ -42980,48 +42991,61 @@ do
 
 			-- 拼图式：不铺白底、不盖住 UI。每片就是一小块玻璃（几乎全透明 + 一圈亮边），
 			-- 从自己落点旁边一小段距离带旋转飞进来、缩放弹回 1，一片接一片咬合。
-			local cols, rows = 6, 5
+			-- 拼图聚合：12×8 = 96 片小方，从「窗口中心向外」的径向方向飞入。
+			-- 关键三点：
+			--   ① 每片只从自己位置偏 26~68px，方向朝外 —— 视觉上是「收拢」而不是乱飞
+			--   ② 延迟按 (cx/cols + cy/rows) 的对角波浪，从前到后一层层铺开
+			--   ③ Quint.Out 不回落，比 Back 干净得多（Back 会甩过头再弹回来）
+			local cols, rows = 12, 8
 			local cw, ch = size.X / cols, size.Y / rows
+			local midX, midY = pos.X + size.X * 0.5, pos.Y + size.Y * 0.5
+			local PINK = Color3.fromRGB(255, 236, 246)
 			local pieces = {}
+			local maxDelay = 0
 			for cy = 0, rows - 1 do
 				for cx = 0, cols - 1 do
 					local tx, ty = pos.X + cx * cw, pos.Y + cy * ch
-					local sx = (math.random(0, 1) == 0) and -1 or 1
-					local sy = (math.random(0, 1) == 0) and -1 or 1
-					local from = UDim2.fromOffset(tx + sx * math.random(38, 96), ty + sy * math.random(38, 96))
+					local px, py = tx + cw * 0.5, ty + ch * 0.5
+					local dx, dy = px - midX, py - midY
+					local d = math.sqrt(dx * dx + dy * dy)
+					if d < 1 then dx, dy, d = 0, -1, 1 end
+					local dist = 26 + math.random() * 42
+					local from = UDim2.fromOffset(
+						tx + (dx / d) * dist, ty + (dy / d) * dist)
 					local piece = create(st, "Frame", {
 						Name = "Shard",
-						Size = UDim2.fromOffset(cw + 1, ch + 1),
+						Size = UDim2.fromOffset(cw + 0.5, ch + 0.5),
 						Position = from,
-						BackgroundColor3 = G.GlassColor,
-						BackgroundTransparency = 0.90,
+						BackgroundColor3 = (G.GlassColor or Color3.new(1, 1, 1)):Lerp(PINK, math.random() * 0.85),
+						BackgroundTransparency = 0.86,
 						BorderSizePixel = 0,
-						Rotation = math.random(-20, 20),
+						Rotation = (math.random() - 0.5) * 26,
 						ZIndex = 80,
 					}, gui)
-					corner(st, piece, 8, false)
-					pixelEdge(st, piece, 8, Color3.fromRGB(238, 243, 252), 0.16)
-					local sc = create(st, "UIScale", { Scale = 0.58 }, piece)
+					local cr = math.max(2, math.min(6, cw * 0.5))
+					corner(st, piece, cr, false)
+					pixelEdge(st, piece, cr, Color3.fromRGB(255, 242, 250), 0.20)
+					local sc = create(st, "UIScale", { Scale = 0.70 }, piece)
+					local delay = (cx / cols + cy / rows) * 0.34
+					if delay > maxDelay then maxDelay = delay end
 					pieces[#pieces + 1] = {
 						Frame = piece, Scale = sc,
 						To = UDim2.fromOffset(tx, ty),
-						Delay = (cx + cy) * 0.014 + math.random() * 0.03,
+						Delay = delay,
 					}
 				end
 			end
-			local last = 0
 			for _, it in ipairs(pieces) do
-				if it.Delay > last then last = it.Delay end
 				pcall(function()
-					local ti = TweenInfo.new(0.30, Enum.EasingStyle.Back, Enum.EasingDirection.Out, it.Delay)
+					local ti = TweenInfo.new(0.42, Enum.EasingStyle.Quint, Enum.EasingDirection.Out, it.Delay)
 					Tween:Create(it.Frame, ti, {
-						Position = it.To, Rotation = 0, BackgroundTransparency = 0.86,
+						Position = it.To, Rotation = 0, BackgroundTransparency = 0.80,
 					}):Play()
 					Tween:Create(it.Scale, ti, { Scale = 1 }):Play()
 				end)
 			end
 			-- 全部咬合后整块玻璃收边消失，露出底下的 UI
-			task.delay(0.30 + last + 0.10, function()
+			task.delay(0.42 + maxDelay + 0.16, function()
 				if not st.Window or st.Window.Closed then
 					for _, it in ipairs(pieces) do pcall(function() it.Frame:Destroy() end) end
 					st.Flying = false
@@ -43555,8 +43579,25 @@ do
 							g.Acc = 0
 							local v = (kind == "fps") and lastFps or lastPing
 							pushSample(g, v)
-							g.Value.Text = (kind == "fps") and tostring(lastFps)
+							local newText = (kind == "fps") and tostring(lastFps)
 								or (pingFresh and (lastPing .. " ms") or "--")
+							if g.Value.Text ~= newText then
+								g.Value.Text = newText
+								-- 读数变化：轻微放大再回落，并提亮一瞬
+								pcall(function()
+									if g.Pulse == nil then
+										g.Pulse = create(st, "UIScale", { Scale = 1 }, g.Value)
+									end
+									g.Pulse.Scale = 1.14
+									g.Value.TextColor3 = Color3.new(1, 1, 1)
+								end)
+							else
+								pcall(function()
+									if g.Pulse ~= nil and g.Pulse.Scale > 1.005 then
+										g.Pulse.Scale = g.Pulse.Scale + (1 - g.Pulse.Scale) * 0.25
+									end
+								end)
+							end
 							local ps = g.Root:FindFirstChild("Shell")
 							local plot = ps and ps:FindFirstChild("Plot")
 							if plot then
